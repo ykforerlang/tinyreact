@@ -1,6 +1,6 @@
-##从0实现一个tiny react(一)
+## 从0实现一个tiny react(一)
 
-###支持JSX
+### 支持JSX
 react组件可以完全不用JSX， 用纯js来写。 JSX语法经过babel转化就是纯js代码， 譬如：
 ```jsx harmony
 const hw = <div>Hello World</div>
@@ -24,7 +24,7 @@ const hw = React.createElement('div', null, "Hello World")
 所以对于react库本身的， 是不需要关心jsx语法的
 
 
-###渲染
+### 渲染
 react 中virtual-dom的概念， 使用一个 js的结构vnode来描述DOM 节点。 然后， 从vnode构渲染出DOM树。 
 这个 vnode由3个属性描述：nodeName(div, Son...), props, children(vnode 组成的数组), 所以 createElement的最简实现
 ```jsx harmony
@@ -304,8 +304,8 @@ function render (vnode, parent, comp, olddom) {
 总结一下： render方法负责把vnode渲染到实际的DOM， 如果组件渲染的DOM已经存在， 就替换， 并且保持一个 __rendered的引用链
 
 
-###敬请期待      
-**[从0实现一个tiny react(二) virtual-dom]()** 
+### 敬请期待      
+**[从0实现一个tiny react(二) virtual-dom]()** <br/>
 **[从0实现一个tiny react(三) 生命周期]()**  
       
 
