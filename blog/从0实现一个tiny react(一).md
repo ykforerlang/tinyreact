@@ -154,7 +154,7 @@ function setAttrs(dom, props) {
    * 当vnode.nodeName是 function的时候， 获取render方法的返回值 vnode'， 执行render(vnode')
 
 
-**[git代码地址](https://github.com/ykforerlang/tinyreact/tree/simpleRenderNoPropsState)**   
+**[git代码分支](https://github.com/ykforerlang/tinyreact/tree/simpleRenderNoPropsState)**   
    
 ### props 和 state
 f(props, state) => v 。 组件的渲染结果由 render方法， props， state决定。 对于之前的render(func.prototype)方法并没有考虑props和state，所以应该是由 组件的实例 来render
@@ -306,11 +306,12 @@ function render (vnode, parent, comp, olddom) {
 总结一下： render方法负责把vnode渲染到实际的DOM， 如果组件渲染的DOM已经存在， 就替换， 并且保持一个 __rendered的引用链
 
 
-**[git代码地址](https://github.com/ykforerlang/tinyreact/tree/propsAndState)**
+**[git代码分支](https://github.com/ykforerlang/tinyreact/tree/propsAndState)**
 
 
 ### 敬请期待      
-**[从0实现一个tiny react(二) virtual-dom]()** <br/>
+**[从0实现一个tiny react(二) virtual-dom]()** 
+
 **[从0实现一个tiny react(三) 生命周期]()**  
       
 
