@@ -137,7 +137,7 @@ function setAttrs(dom, props) {
 
         if(k[0] == "o" && k[1] == "n") {
             const capture = (k.indexOf("Capture") != -1)
-            dom.addEventListener(k.substring(2).toLowerCase(), capture)
+            dom.addEventListener(k.substring(2).toLowerCase(), v, capture)
             return
         }
 
@@ -145,17 +145,173 @@ function setAttrs(dom, props) {
     })
 }
 ```
-渲染实际Hello World([jsfiddle演示地址](http://jsfiddle.net/76tsh5du/))
+渲染实际Hello World([jsfiddle演示地址](http://jsfiddle.net/yankang/qh1p02p1/))
 总结一下： 
 1. createElement 方法负责创建 vnode
-2. renderInBrowser 方法负责根据生成的vnode， 渲染到实际的dom的一个递归方法 (由于组件 最终一定会render html的标签。 所以这个递归一定是能够正常返回的)
+2. render 方法负责根据生成的vnode， 渲染到实际的dom的一个递归方法 (由于组件 最终一定会render html的标签。 所以这个递归一定是能够正常返回的)
    * vnode是字符串的是， 创建textNode节点
-   * 当vnode.nodeName是 字符串的时候， 创建dom节点， 根据props设置节点属性， 遍历renderInBrowser children
-   * 当vnode.nodeName是 function的时候， 获取render方法的返回值 vnode'， 执行renderInBrowser(vnode')
+   * 当vnode.nodeName是 字符串的时候， 创建dom节点， 根据props设置节点属性， 遍历render children
+   * 当vnode.nodeName是 function的时候， 获取render方法的返回值 vnode'， 执行render(vnode')
    
    
-###props &amp; state
-&amp;
+###props 和 state
+f(props, state) => v 。 组件的渲染结果由 render方法， props， state决定。 对于之前的render(func.prototype)方法并没有考虑props和state，所以应该是由 组件的实例 来render
+```javascript 1.7
+function render(vnode, parent) {
+    ...
+    } else if (typeof vnode.nodeName == "function") {
+        let func = vnode.nodeName
+        let inst = new func(vnode.props)
+        let innerVnode = inst.render()  //this.props
+        render(innerVnode, parent)
+    }
+    ...
+}
+
+class Component {
+    constructor(props) {
+        this.props = props
+    }
+}
+```
+对于 state, 当调用组件的setState方法的时候, 简单来说就是渲染一个新DOM树， 替换老的DOM。 所以 
+1. 组件实例 必须有机制获取到 olddom
+2. 同时 render方法的第二个参数是 parent。 组件实例必须有机制获取到 parentDOM
+这2个问题其实是一个问题。  parent = olddom.parentNode 。 这里采用的机制是 每个组件实例 记住 直接渲染出的组件实例／DOM。 下图：
+![实例引用关系](__rendered.png)
+代码实现： 
+```javascript 1.7
+function render (vnode, parent, comp) {
+    let dom
+    if(typeof vnode == "string") {
+        ...
+        comp && (comp.__rendered = dom)
+        ...
+    } else if(typeof vnode.nodeName == "string") {
+        ...
+        comp && (comp.__rendered = dom)
+        ...
+    } else if (typeof vnode.nodeName == "function") {
+        ...
+        comp && (comp.__rendered = inst)
+        ...
+    }
+}
+```
+其中 comp 参数代表 "我是被谁渲染的"。 获取olddom的代码实现： 
+```javascript 1.7
+function getDOM(comp) {
+    let rendered = comp.__rendered
+    while (rendered instanceof Component) { //判断对象是否是dom
+        rendered = rendered.__rendered
+    }
+    return rendered
+}
+```
+调用 setState 使用olddom替换老的dom 代码如下：
+```javascript 1.7
+function render(vnode, parent, comp, olddom) {
+    let dom
+    if(typeof vnode == "string") {
+        ...
+        if(olddom) {
+            parent.replaceChild(dom, olddom)
+        } else {
+            parent.appendChild(dom)
+        }
+        ...
+    } else if(typeof vnode.nodeName == "string") {
+        ...
+        if(olddom) {
+            parent.replaceChild(dom, olddom)
+        } else {
+            parent.appendChild(dom)
+        }
+        ...
+    } else if (typeof vnode.nodeName == "function") {
+        ...
+        render(innerVnode, parent, inst, olddom)
+    }
+}
+```
+拼凑一下以上功能， 完整代码实现：
+```javascript 1.7
+///Component
+class Component {
+    constructor(props) {
+        this.props = props
+    }
+
+    setState(state) {
+        setTimeout(() => {
+            this.state = state
+            const vnode = this.render()
+            let olddom = getDOM(this)
+            render(vnode, olddom.parentNode, this, olddom)
+        }, 0)
+    }
+}
+
+
+function getDOM(comp) {
+    let rendered = comp.__rendered
+    while (rendered instanceof Component) { //判断对象是否是dom
+        rendered = rendered.__rendered
+    }
+    return rendered
+}
+
+///render
+function render (vnode, parent, comp, olddom) {
+    let dom
+    if(typeof vnode == "string" || typeof vnode == "number") {
+        dom = document.createTextNode(vnode)
+        comp && (comp.__rendered = dom)
+        parent.appendChild(dom)
+
+        if(olddom) {
+            parent.replaceChild(dom, olddom)
+        } else {
+            parent.appendChild(dom)
+        }
+    } else if(typeof vnode.nodeName == "string") {
+        dom = document.createElement(vnode.nodeName)
+
+        comp && (comp.__rendered = dom)
+        setAttrs(dom, vnode.props)
+
+        if(olddom) {
+            parent.replaceChild(dom, olddom)
+        } else {
+            parent.appendChild(dom)
+        }
+
+        for(let i = 0; i < vnode.children.length; i++) {
+            render(vnode.children[i], dom, null, null)
+        }
+    } else if (typeof vnode.nodeName == "function") {
+        let func = vnode.nodeName
+        let inst = new func(vnode.props)
+
+        comp && (comp.__rendered = inst)
+
+        let innerVnode = inst.render(inst)
+        render(innerVnode, parent, inst, olddom)
+    }
+}
+```
+[有状态组件 演示地址](http://jsfiddle.net/yankang/09ybcxm4/), have fun！<br/>
+总结一下： render方法负责把vnode渲染到实际的DOM， 如果组件渲染的DOM已经存在， 就替换， 并且保持一个 __rendered的引用链
+
+
+###敬请期待      
+**[从0实现一个tiny react(二) virtual-dom]()**  
+**[从0实现一个tiny react(三) 生命周期]()**  
+      
+
+
+
+
 
 
 
