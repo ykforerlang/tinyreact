@@ -107,7 +107,9 @@ function render(vnode, parent) {
         }
     } else if (typeof vnode.nodeName == "function") {
         let func = vnode.nodeName
-        let innerVnode = func.prototype.render()
+        
+        let inst = new func(vnode.props)
+        let innerVnode = inst.render(inst)
         render(innerVnode, parent)
     }
 }
@@ -157,14 +159,14 @@ function setAttrs(dom, props) {
 **[git代码分支](https://github.com/ykforerlang/tinyreact/tree/simpleRenderNoPropsState)**   
    
 ### props 和 state
-f(props, state) => v 。 组件的渲染结果由 render方法， props， state决定。 对于之前的render(func.prototype)方法并没有考虑props和state，所以应该是由 组件的实例 来render
+f(props, state) => v 。 组件的渲染结果由 render方法， props， state决定。 基类Component 设置props
 ```javascript 1.7
 function render(vnode, parent) {
     ...
     } else if (typeof vnode.nodeName == "function") {
         let func = vnode.nodeName
         let inst = new func(vnode.props)
-        let innerVnode = inst.render()  //this.props
+        let innerVnode = inst.render()  // this.props
         render(innerVnode, parent)
     }
     ...
