@@ -305,7 +305,7 @@ function render (vnode, parent, comp, olddom) {
 
 
 ###敬请期待      
-**[从0实现一个tiny react(二) virtual-dom]()**  
+**[从0实现一个tiny react(二) virtual-dom]()** 
 **[从0实现一个tiny react(三) 生命周期]()**  
       
 
