@@ -109,7 +109,7 @@ function render(vnode, parent) {
         let func = vnode.nodeName
         
         let inst = new func(vnode.props)
-        let innerVnode = inst.render(inst)
+        let innerVnode = inst.render()
         render(innerVnode, parent)
     }
 }
