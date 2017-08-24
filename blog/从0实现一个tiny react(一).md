@@ -304,7 +304,8 @@ function render (vnode, parent, comp, olddom) {
     }
 }
 ```
-[有状态组件 演示地址](http://jsfiddle.net/yankang/09ybcxm4/), have fun！<br/>
+[有状态组件 演示地址](http://jsfiddle.net/yankang/09ybcxm4/), have fun！
+
 总结一下： render方法负责把vnode渲染到实际的DOM， 如果组件渲染的DOM已经存在， 就替换， 并且保持一个 __rendered的引用链
 
 
