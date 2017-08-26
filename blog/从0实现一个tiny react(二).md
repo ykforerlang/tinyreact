@@ -8,9 +8,8 @@ class AppWithNoVDOM extends Component {
 
     testApp3() {
         let result = []
-        let count = 10000
-        for(let i = 0; i < count ; i++) {
-            result.push(<App3 text={i}/>)
+        for(let i = 0; i < 10000 ; i++) {
+            result.push(<div>{i}</div>)
         }
         return result
     }

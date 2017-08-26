@@ -2,15 +2,32 @@
  * Created by apple on 2017/8/21.
  */
 
-import render from '../../src/render'
 import createElement from '../../src/createElement'
+import diff from './diff'
 
-class Component{}
+const app1= (
+    <div>
+        <div>
+            <p>p1</p>
+            <p>p2</p>
+        </div>
+        <ul>
+            <li>li1</li>
+            <li>li2</li>
+            <li>li3</li>
+        </ul>
+    </div>
+)
 
-class HelloWorld extends Component {
-    render() {
-        return <div style={{ color: 'red' }}>Hello World</div>
-    }
-}
+const app2 =(
+    <div>
+        <ul>
+            <li>li1</li>
+            <li>li2</li>
+            <li>li3</li>
+        </ul>
+    </div>
+)
 
-render(<HelloWorld/>, document.getElementById("root"))
+const diff = diff(app1, app2)
+console.log("diff:", diff)

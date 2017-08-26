@@ -29,10 +29,18 @@ react 中virtual-dom的概念， 使用一个 js的结构vnode来描述DOM 节�
 这个 vnode由3个属性描述：nodeName(div, Son...), props, children(vnode 组成的数组), 所以 createElement的最简实现
 ```jsx harmony
 function createElement(comp, props, ...args) {
+    let children = []
+    for(let i = 0; i< args.length;i++){
+        if(args[i] instanceof Array) {
+            children = children.concat(args[i])
+        } else {
+            children.push(args[i])
+        }
+    }
     return {
         nodeName: comp,
         props: props || {},
-        children: args || []
+        children
     }
 }
 ```
@@ -79,7 +87,7 @@ function renderVDOM(vnode) {
     }
 
 ``` 
-执行上面的结构将返回 ([jsfiddle演示地址](http://jsfiddle.net/yankang/tv9o88yw/)）)： 
+执行上面的结构将返回 ([jsfiddle演示地址](http://jsfiddle.net/yankang/y9jwy5dr/)）)： 
 ```json
 {
   "nodeName": "div",
@@ -147,7 +155,7 @@ function setAttrs(dom, props) {
     })
 }
 ```
-渲染实际Hello World([jsfiddle演示地址](http://jsfiddle.net/yankang/qh1p02p1/))
+渲染实际Hello World([jsfiddle演示地址](http://jsfiddle.net/yankang/955u1xvt/))
 总结一下： 
 1. createElement 方法负责创建 vnode
 2. render 方法负责根据生成的vnode， 渲染到实际的dom的一个递归方法 (由于组件 最终一定会render html的标签。 所以这个递归一定是能够正常返回的)
@@ -304,7 +312,7 @@ function render (vnode, parent, comp, olddom) {
     }
 }
 ```
-[有状态组件 演示地址](http://jsfiddle.net/yankang/09ybcxm4/), have fun！
+[有状态组件 演示地址](http://jsfiddle.net/yankang/ufhf1fqx/), have fun！
 
 总结一下： render方法负责把vnode渲染到实际的DOM， 如果组件渲染的DOM已经存在， 就替换， 并且保持一个 __rendered的引用链
 
