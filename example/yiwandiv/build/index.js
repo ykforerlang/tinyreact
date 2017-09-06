@@ -70,9 +70,11 @@
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["default"] = render;
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__util__ = __webpack_require__(2);
 /**
  * Created by apple on 2017/8/21.
  */
+
 /**
  * 渲染vnode成实际的dom
  * @param vnode 虚拟dom表示
@@ -83,29 +85,23 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 function render(vnode, parent, comp, olddom) {
     let dom;
     if (typeof vnode == "string" || typeof vnode == "number") {
-        dom = document.createTextNode(vnode);
-        comp && (comp.__rendered = dom);
-        parent.appendChild(dom);
-
-        if (olddom) {
-            parent.replaceChild(dom, olddom);
+        if (olddom && olddom.splitText) {
+            if (olddom.nodeValue !== vnode) {
+                olddom.nodeValue = vnode;
+            }
         } else {
-            parent.appendChild(dom);
+            dom = document.createTextNode(vnode);
+            if (olddom) {
+                parent.replaceChild(dom, olddom);
+            } else {
+                parent.appendChild(dom);
+            }
         }
     } else if (typeof vnode.nodeName == "string") {
-        dom = document.createElement(vnode.nodeName);
-
-        comp && (comp.__rendered = dom);
-        setAttrs(dom, vnode.props);
-
-        if (olddom) {
-            parent.replaceChild(dom, olddom);
+        if (!olddom || olddom.nodeName != vnode.nodeName.toUpperCase()) {
+            createNewDom(vnode, parent, comp, olddom);
         } else {
-            parent.appendChild(dom);
-        }
-
-        for (let i = 0; i < vnode.children.length; i++) {
-            render(vnode.children[i], dom, null, null);
+            diffDOM(vnode, parent, comp, olddom);
         }
     } else if (typeof vnode.nodeName == "function") {
         let func = vnode.nodeName;
@@ -113,7 +109,7 @@ function render(vnode, parent, comp, olddom) {
 
         comp && (comp.__rendered = inst);
 
-        let innerVnode = inst.render(inst);
+        let innerVnode = func.prototype.render.call(inst);
         render(innerVnode, parent, inst, olddom);
     }
 }
@@ -130,7 +126,7 @@ function setAttrs(dom, props) {
 
         if (k == "style") {
             if (typeof v == "string") {
-                dom.style.cssText = v;
+                dom.style.cssText = v; //IE
             }
 
             if (typeof v == "object") {
@@ -151,6 +147,122 @@ function setAttrs(dom, props) {
     });
 }
 
+function removeAttrs(dom, props) {
+    for (let k in props) {
+        if (k == "className") {
+            dom.removeAttribute("class");
+            continue;
+        }
+
+        if (k == "style") {
+            dom.style.cssText = ""; //IE
+            continue;
+        }
+
+        if (k[0] == "o" && k[1] == "n") {
+            const capture = k.indexOf("Capture") != -1;
+            const v = props[k];
+            dom.removeEventListener(k.substring(2).toLowerCase(), v, capture);
+            continue;
+        }
+
+        dom.removeAttribute(k);
+    }
+}
+
+/**
+ *  调用者保证newProps 与 oldProps 的keys是相同的
+ * @param dom
+ * @param newProps
+ * @param oldProps
+ */
+function diffAttrs(dom, newProps, oldProps) {
+    for (let k in newProps) {
+        let v = newProps[k];
+        let ov = oldProps[k];
+        if (v === ov) continue;
+
+        if (k == "className") {
+            dom.setAttribute("class", v);
+            continue;
+        }
+
+        if (k == "style") {
+            if (typeof v == "string") {
+                dom.style.cssText = v;
+            } else if (typeof v == "object" && typeof ov == "object") {
+                for (let vk in v) {
+                    if (v[vk] !== ov[vk]) {
+                        dom.style[vk] = v[vk];
+                    }
+                }
+
+                for (let ovk in ov) {
+                    if (v[ovk] === undefined) {
+                        dom.style[ovk] = "";
+                    }
+                }
+            } else {
+                //typeof v == "object" && typeof ov == "string"
+                dom.style = {};
+                for (let vk in v) {
+                    dom.style[vk] = v[vk];
+                }
+            }
+            continue;
+        }
+
+        if (k[0] == "o" && k[1] == "n") {
+            const capture = k.indexOf("Capture") != -1;
+            let eventKey = k.substring(2).toLowerCase();
+            dom.removeEventListener(eventKey, ov, capture);
+            dom.addEventListener(eventKey, v, capture);
+            continue;
+        }
+
+        dom.setAttribute(k, v);
+    }
+}
+
+function createNewDom(vnode, parent, comp, olddom) {
+    let dom = document.createElement(vnode.nodeName);
+
+    dom.__vnode = vnode;
+    comp && (comp.__rendered = dom);
+    setAttrs(dom, vnode.props);
+
+    if (olddom) {
+        parent.replaceChild(dom, olddom);
+    } else {
+        parent.appendChild(dom);
+    }
+
+    for (let i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], dom, null, null);
+    }
+}
+
+function diffDOM(vnode, parent, comp, olddom) {
+    const { onlyInLeft, bothIn, onlyInRight } = Object(__WEBPACK_IMPORTED_MODULE_0__util__["a" /* diffObject */])(vnode.props, olddom.__vnode.props);
+    setAttrs(olddom, onlyInLeft);
+    removeAttrs(olddom, onlyInRight);
+    diffAttrs(olddom, bothIn.left, bothIn.right);
+
+    let olddomChild = olddom.firstChild;
+    for (let i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], olddom, null, olddomChild);
+        olddomChild = olddomChild && olddomChild.nextSibling;
+    }
+
+    while (olddomChild) {
+        //删除多余的子节点
+        let next = olddomChild.nextSibling;
+        olddom.removeChild(olddomChild);
+        olddomChild = next;
+    }
+    olddom.__vnode = vnode;
+}
+
 /***/ }),
 /* 1 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -164,11 +276,11 @@ var _render = __webpack_require__(0);
 
 var _render2 = _interopRequireDefault(_render);
 
-var _Component2 = __webpack_require__(2);
+var _Component2 = __webpack_require__(3);
 
 var _Component3 = _interopRequireDefault(_Component2);
 
-var _createElement = __webpack_require__(3);
+var _createElement = __webpack_require__(4);
 
 var _createElement2 = _interopRequireDefault(_createElement);
 
@@ -190,29 +302,87 @@ var App = function (_Component) {
     function App(props) {
         _classCallCheck(this, App);
 
-        return _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
+        var _this = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
+
+        _this.state = {
+            allTest: _this.getTest()
+        };
+
+        _this.start = 0;
+        _this.end = 10000;
+        return _this;
     }
 
     _createClass(App, [{
-        key: 'getDivs',
-        value: function getDivs() {
+        key: 'getTest',
+        value: function getTest() {
             var result = [];
             for (var i = 0; i < 10000; i++) {
                 result.push((0, _createElement2.default)(
                     'div',
-                    null,
+                    { style: {
+                            width: '30px',
+                            color: 'red',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            height: '20px',
+                            textAlign: 'center',
+                            margin: '5px',
+                            padding: '5px',
+                            border: '1px solid red',
+                            position: 'relative'
+                        }, title: i },
                     i
                 ));
             }
             return result;
         }
     }, {
+        key: 'getNowAllTest',
+        value: function getNowAllTest() {
+            this.start = this.start - 1;
+            return [(0, _createElement2.default)(
+                'div',
+                { style: {
+                        width: '30px',
+                        color: 'red',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        height: '20px',
+                        textAlign: 'center',
+                        margin: '5px',
+                        padding: '5px',
+                        border: '1px solid red',
+                        position: 'relative'
+                    }, title: this.start },
+                this.start
+            )].concat(this.state.allTest);
+        }
+    }, {
+        key: 'getNowAllTest2',
+        value: function getNowAllTest2() {
+            this.end = this.end + 1;
+            return this.state.allTest.concat([(0, _createElement2.default)(
+                'div',
+                { style: {
+                        width: '30px',
+                        color: 'red',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        height: '20px',
+                        textAlign: 'center',
+                        margin: '5px',
+                        padding: '5px',
+                        border: '1px solid red',
+                        position: 'relative'
+                    }, title: this.end },
+                this.end
+            )]);
+        }
+    }, {
         key: 'render',
         value: function render() {
             var _this2 = this;
-
-            var divs = this.getDivs();
-            console.log("xx:", divs);
 
             return (0, _createElement2.default)(
                 'div',
@@ -221,11 +391,13 @@ var App = function (_Component) {
                 (0, _createElement2.default)(
                     'a',
                     { onClick: function onClick(e) {
-                            _this2.setState({});
+                            _this2.setState({
+                                allTest: _this2.getNowAllTest2()
+                            });
                         } },
                     'click me'
                 ),
-                this.getDivs()
+                this.state.allTest
             );
         }
     }]);
@@ -233,10 +405,52 @@ var App = function (_Component) {
     return App;
 }(_Component3.default);
 
+var startTime = new Date().getTime();
 (0, _render2.default)((0, _createElement2.default)(App, null), document.getElementById("root"));
+console.log("duration:", new Date().getTime() - startTime);
 
 /***/ }),
 /* 2 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export (immutable) */ __webpack_exports__["a"] = diffObject;
+/**
+ * Created by apple on 2017/8/30.
+ */
+function diffObject(leftProps, rightProps) {
+    const onlyInLeft = {};
+    const bothLeft = {};
+    const bothRight = {};
+    const onlyInRight = {};
+
+    for (let key in leftProps) {
+        if (rightProps[key] === undefined) {
+            onlyInLeft[key] = leftProps[key];
+        } else {
+            bothLeft[key] = leftProps[key];
+            bothRight[key] = rightProps[key];
+        }
+    }
+
+    for (let key in rightProps) {
+        if (leftProps[key] === undefined) {
+            onlyInRight[key] = rightProps[key];
+        }
+    }
+
+    return {
+        onlyInRight,
+        onlyInLeft,
+        bothIn: {
+            left: bothLeft,
+            right: bothRight
+        }
+    };
+}
+
+/***/ }),
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -267,7 +481,7 @@ var Component = function () {
     }
 
     _createClass(Component, [{
-        key: 'setState',
+        key: "setState",
         value: function setState(state) {
             var _this = this;
 
@@ -275,7 +489,9 @@ var Component = function () {
                 _this.state = state;
                 var vnode = _this.render();
                 var olddom = getDOM(_this);
+                var startTime = new Date().getTime();
                 (0, _render2.default)(vnode, olddom.parentNode, _this, olddom);
+                console.log("duration:", new Date().getTime() - startTime);
             }, 0);
         }
     }]);
@@ -296,7 +512,7 @@ function getDOM(comp) {
 }
 
 /***/ }),
-/* 3 */
+/* 4 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";

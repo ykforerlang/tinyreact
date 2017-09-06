@@ -5,34 +5,86 @@ import render from '../../src/render'
 import Component from './Component'  // 由于Component 是es6写法的class， 放在项目外。导入babel不会处理
 import createElement from '../../src/createElement'
 
+
+
 class App extends Component {
     constructor(props) {
         super(props)
+
+        this.state = {
+            allTest: this.getTest()
+        }
+
+        this.start = 0
+        this.end = 10000
     }
 
-    getDivs() {
+    getTest() {
         let result = []
         for(let i = 0; i < 10000; i++) {
-            result.push(<div>{i}</div>)
+            result.push(<div style={{
+                width: '30px',
+                color: 'red',
+                fontSize: '12px',
+                fontWeight: 600,
+                height: '20px',
+                textAlign: 'center',
+                margin:'5px',
+                padding: '5px',
+                border:'1px solid red',
+                position: 'relative'
+            }} title={i} >{i}</div>)
         }
         return result
     }
 
+    getNowAllTest() {
+        this.start = this.start - 1
+        return [<div style={{
+            width: '30px',
+            color: 'red',
+            fontSize: '12px',
+            fontWeight: 600,
+            height: '20px',
+            textAlign: 'center',
+            margin:'5px',
+            padding: '5px',
+            border:'1px solid red',
+            position: 'relative'
+        }} title={this.start} >{this.start}</div>].concat(this.state.allTest)
+    }
+
+    getNowAllTest2() {
+        this.end = this.end + 1
+        return this.state.allTest.concat([<div style={{
+            width: '30px',
+            color: 'red',
+            fontSize: '12px',
+            fontWeight: 600,
+            height: '20px',
+            textAlign: 'center',
+            margin:'5px',
+            padding: '5px',
+            border:'1px solid red',
+            position: 'relative'
+        }} title={this.end} >{this.end}</div>])
+    }
+
     render() {
-        let divs = this.getDivs()
-        console.log("xx:", divs)
-
-
         return (
             <div
                 width={100}>
                 <a  onClick={e => {
-                    this.setState({})
+                    this.setState({
+                        allTest: this.getNowAllTest2()
+                    })
                 }}>click me</a>
-                {this.getDivs()}
+                {this.state.allTest}
             </div>
         )
     }
 }
 
+const startTime = new Date().getTime()
 render(<App/>, document.getElementById("root"))
+console.log("duration:", new Date().getTime() - startTime)

@@ -13,7 +13,9 @@ export default class Component {
             this.state = state
             const vnode = this.render()
             let olddom = getDOM(this)
+            const startTime = new Date().getTime()
             render(vnode, olddom.parentNode, this, olddom)
+            console.log("duration:", new Date().getTime() - startTime)
         }, 0)
     }
 }

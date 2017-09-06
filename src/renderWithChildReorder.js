@@ -1,7 +1,8 @@
 /**
- * Created by apple on 2017/8/21.
+ * Created by apple on 2017/9/6.
  */
 import { diffObject } from './util'
+
 /**
  * 渲染vnode成实际的dom
  * @param vnode 虚拟dom表示
@@ -9,9 +10,9 @@ import { diffObject } from './util'
  * @param comp   谁渲染了我
  * @param olddom  老的dom
  */
-export default function render(vnode, parent, comp, olddom) {
+export default function render(vnode, parent, comp, olddom, myIndex) {
     let dom
-    if(typeof vnode == "string" || typeof vnode == "number" ) {
+    if(typeof vnode == "string" || typeof vnode == "number") {
         if(olddom && olddom.splitText) {
             if(olddom.nodeValue !== vnode) {
                 olddom.nodeValue = vnode
@@ -21,12 +22,13 @@ export default function render(vnode, parent, comp, olddom) {
             if(olddom) {
                 parent.replaceChild(dom, olddom)
             } else {
-                parent.appendChild(dom)
+                const target = typeof myIndex == "number" ? parent.childNodes[myIndex] : null
+                parent.insertBefore(dom, target)
             }
         }
     } else if(typeof vnode.nodeName == "string") {
         if(!olddom || olddom.nodeName != vnode.nodeName.toUpperCase()) {
-            createNewDom(vnode, parent, comp, olddom)
+            createNewDom(vnode, parent, comp, olddom, myIndex)
         } else {
             diffDOM(vnode, parent, comp, olddom)
         }
@@ -36,7 +38,7 @@ export default function render(vnode, parent, comp, olddom) {
 
         comp && (comp.__rendered = inst)
 
-        let innerVnode = func.prototype.render.call(inst)
+        let innerVnode = inst.render(inst)
         render(innerVnode, parent, inst, olddom)
     }
 }
@@ -152,7 +154,7 @@ function diffAttrs(dom, newProps, oldProps) {
     }
 }
 
-function createNewDom(vnode, parent, comp, olddom) {
+function createNewDom(vnode, parent, comp, olddom, myIndex) {
     let dom = document.createElement(vnode.nodeName)
 
     dom.__vnode = vnode
@@ -162,7 +164,8 @@ function createNewDom(vnode, parent, comp, olddom) {
     if(olddom) {
         parent.replaceChild(dom, olddom)
     } else {
-        parent.appendChild(dom)
+        const target = typeof myIndex == "number" ? parent.childNodes[myIndex] : null
+        parent.insertBefore(dom, target)
     }
 
     for(let i = 0; i < vnode.children.length; i++) {
@@ -176,6 +179,8 @@ function diffDOM(vnode, parent, comp, olddom) {
     removeAttrs(olddom, onlyInRight)
     diffAttrs(olddom, bothIn.left, bothIn.right)
 
+
+    //reorder(olddom, vnode.props, olddom.__vnode.props)
     let olddomChild = olddom.firstChild
     for(let i = 0; i < vnode.children.length; i++) {
         render(vnode.children[i], olddom, null, olddomChild)
@@ -188,4 +193,40 @@ function diffDOM(vnode, parent, comp, olddom) {
         olddomChild = next
     }
     olddom.__vnode = vnode
+}
+
+
+function myReorder(oldChildNodes, vchildrens, olddom) {
+    let ocnKeyMap = {}  // key值和 child的映射， 方便根据key确定child
+    for(let i = 0; i < oldChildNodes.length; i ++) {
+        const key = oldChildNodes[i].__vnode.props.key
+        ocnKeyMap[key] = oldChildNodes[i]
+    }
+
+    vchildrens.forEach((element, index) => {
+        const key = element.props.key
+        if(ocnKeyMap[key] === undefined) { // 如果之前不存在这个key值, 直接在对应位置 插入一个新的
+            render(element, olddom, null, null, index)
+        } else {
+            // 如果可以复用， 则直接diff。 如果不可以复用， render内部的 replaceChild 会插入新的dom， 并且移除之前的
+            let ocdom = ocnKeyMap[key]
+            render(element, olddom, null, ocdom, index)
+
+
+            if (key === oldList[index].key) {
+                // 如果 新的key和老的key位置相同 donothing
+                let ocdom = ocnKeyMap[key]
+                render(element, olddom, null, ocdom, index) //尝试复用 oldchild
+
+            } else {
+                let ocdom = ocnKeyMap[key]
+                render(element, olddom, null, ocdom, index) //尝试复用 oldchild
+            }
+        }
+    })
+
+    //删除多余节点
+    while (oldChildNodes.length !== vchildrens.length) {
+        olddom.removeChild(olddom.lastChild)
+    }
 }

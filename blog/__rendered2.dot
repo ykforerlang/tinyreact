@@ -1,0 +1,9 @@
+digraph G {
+    Father -> Son
+    Son -> Grandson
+    Grandson -> div
+
+    div -> Gs1 -> Gss1 -> Gsss1
+    div -> Gs2
+    div -> Gs3
+}

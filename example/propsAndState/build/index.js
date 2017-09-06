@@ -70,35 +70,40 @@
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 /* harmony export (immutable) */ __webpack_exports__["default"] = render;
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__util__ = __webpack_require__(2);
 /**
  * Created by apple on 2017/8/21.
  */
-function render(vnode, parent, comp, olddom) {
+
+
+/**
+ * 渲染vnode成实际的dom
+ * @param vnode 虚拟dom表示
+ * @param parent 实际渲染出来的dom，挂载的父元素
+ * @param comp   谁渲染了我
+ * @param olddom  老的dom
+ */
+function render(vnode, parent, comp, olddom, myIndex) {
     let dom;
     if (typeof vnode == "string" || typeof vnode == "number") {
-        dom = document.createTextNode(vnode);
-        comp && (comp.__rendered = dom);
-        parent.appendChild(dom);
-
-        if (olddom) {
-            parent.replaceChild(dom, olddom);
+        if (olddom && olddom.splitText) {
+            if (olddom.nodeValue !== vnode) {
+                olddom.nodeValue = vnode;
+            }
         } else {
-            parent.appendChild(dom);
+            dom = document.createTextNode(vnode);
+            if (olddom) {
+                parent.replaceChild(dom, olddom);
+            } else {
+                const target = typeof myIndex == "number" ? parent.childNodes[myIndex] : null;
+                parent.insertBefore(dom, target);
+            }
         }
     } else if (typeof vnode.nodeName == "string") {
-        dom = document.createElement(vnode.nodeName);
-
-        comp && (comp.__rendered = dom);
-        setAttrs(dom, vnode.props);
-
-        if (olddom) {
-            parent.replaceChild(dom, olddom);
+        if (!olddom || olddom.nodeName != vnode.nodeName.toUpperCase()) {
+            createNewDom(vnode, parent, comp, olddom, myIndex);
         } else {
-            parent.appendChild(dom);
-        }
-
-        for (let i = 0; i < vnode.children.length; i++) {
-            render(vnode.children[i], dom, null, null);
+            diffDOM(vnode, parent, comp, olddom);
         }
     } else if (typeof vnode.nodeName == "function") {
         let func = vnode.nodeName;
@@ -123,7 +128,7 @@ function setAttrs(dom, props) {
 
         if (k == "style") {
             if (typeof v == "string") {
-                dom.style.cssText = v;
+                dom.style.cssText = v; //IE
             }
 
             if (typeof v == "object") {
@@ -144,6 +149,154 @@ function setAttrs(dom, props) {
     });
 }
 
+function removeAttrs(dom, props) {
+    for (let k in props) {
+        if (k == "className") {
+            dom.removeAttribute("class");
+            continue;
+        }
+
+        if (k == "style") {
+            dom.style.cssText = ""; //IE
+            continue;
+        }
+
+        if (k[0] == "o" && k[1] == "n") {
+            const capture = k.indexOf("Capture") != -1;
+            const v = props[k];
+            dom.removeEventListener(k.substring(2).toLowerCase(), v, capture);
+            continue;
+        }
+
+        dom.removeAttribute(k);
+    }
+}
+
+/**
+ *  调用者保证newProps 与 oldProps 的keys是相同的
+ * @param dom
+ * @param newProps
+ * @param oldProps
+ */
+function diffAttrs(dom, newProps, oldProps) {
+    for (let k in newProps) {
+        let v = newProps[k];
+        let ov = oldProps[k];
+        if (v === ov) continue;
+
+        if (k == "className") {
+            dom.setAttribute("class", v);
+            continue;
+        }
+
+        if (k == "style") {
+            if (typeof v == "string") {
+                dom.style.cssText = v;
+            } else if (typeof v == "object" && typeof ov == "object") {
+                for (let vk in v) {
+                    if (v[vk] !== ov[vk]) {
+                        dom.style[vk] = v[vk];
+                    }
+                }
+
+                for (let ovk in ov) {
+                    if (v[ovk] === undefined) {
+                        dom.style[ovk] = "";
+                    }
+                }
+            } else {
+                //typeof v == "object" && typeof ov == "string"
+                dom.style = {};
+                for (let vk in v) {
+                    dom.style[vk] = v[vk];
+                }
+            }
+            continue;
+        }
+
+        if (k[0] == "o" && k[1] == "n") {
+            const capture = k.indexOf("Capture") != -1;
+            let eventKey = k.substring(2).toLowerCase();
+            dom.removeEventListener(eventKey, ov, capture);
+            dom.addEventListener(eventKey, v, capture);
+            continue;
+        }
+
+        dom.setAttribute(k, v);
+    }
+}
+
+function createNewDom(vnode, parent, comp, olddom, myIndex) {
+    let dom = document.createElement(vnode.nodeName);
+
+    dom.__vnode = vnode;
+    comp && (comp.__rendered = dom);
+    setAttrs(dom, vnode.props);
+
+    if (olddom) {
+        parent.replaceChild(dom, olddom);
+    } else {
+        const target = typeof myIndex == "number" ? parent.childNodes[myIndex] : null;
+        parent.insertBefore(dom, target);
+    }
+
+    for (let i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], dom, null, null);
+    }
+}
+
+function diffDOM(vnode, parent, comp, olddom) {
+    const { onlyInLeft, bothIn, onlyInRight } = Object(__WEBPACK_IMPORTED_MODULE_0__util__["a" /* diffObject */])(vnode.props, olddom.__vnode.props);
+    setAttrs(olddom, onlyInLeft);
+    removeAttrs(olddom, onlyInRight);
+    diffAttrs(olddom, bothIn.left, bothIn.right);
+
+    //reorder(olddom, vnode.props, olddom.__vnode.props)
+    let olddomChild = olddom.firstChild;
+    for (let i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], olddom, null, olddomChild);
+        olddomChild = olddomChild && olddomChild.nextSibling;
+    }
+
+    while (olddomChild) {
+        //删除多余的子节点
+        let next = olddomChild.nextSibling;
+        olddom.removeChild(olddomChild);
+        olddomChild = next;
+    }
+    olddom.__vnode = vnode;
+}
+
+function myReorder(oldChildNodes, vchildrens, olddom) {
+    let ocnKeyMap = {}; // key值和 child的映射， 方便根据key确定child
+    for (let i = 0; i < oldChildNodes.length; i++) {
+        const key = oldChildNodes[i].__vnode.props.key;
+        ocnKeyMap[key] = oldChildNodes[i];
+    }
+
+    vchildrens.forEach((element, index) => {
+        const key = element.props.key;
+        if (ocnKeyMap[key] === undefined) {
+            // 如果之前不存在这个key值, 直接在对应位置 插入一个新的
+            olddom.insertBefore();
+
+            render(element, olddom, null, null);
+        }
+    });
+
+    newList.forEach((element, index) => {
+        if (oldMap[element.key] === undefined) {
+            //oldList.splice(index, 0, element)
+            insertBefore(oldList, element, oldList[index]);
+        } else {
+            if (element.key !== oldList[index].key) {
+                let ov = oldMap[element.key];
+                insertBefore(oldList, ov, oldList[index]);
+            }
+        }
+    });
+}
+
 /***/ }),
 /* 1 */
 /***/ (function(module, exports, __webpack_require__) {
@@ -157,11 +310,11 @@ var _render = __webpack_require__(0);
 
 var _render2 = _interopRequireDefault(_render);
 
-var _Component3 = __webpack_require__(2);
+var _Component3 = __webpack_require__(3);
 
 var _Component4 = _interopRequireDefault(_Component3);
 
-var _createElement = __webpack_require__(3);
+var _createElement = __webpack_require__(4);
 
 var _createElement2 = _interopRequireDefault(_createElement);
 
@@ -194,7 +347,7 @@ var Dog = function (_Component) {
                 { style: { color: this.props.color } },
                 'i am a ',
                 this.props.color,
-                ' dog'
+                ' dog, click me to change color'
             );
         }
     }]);
@@ -243,6 +396,55 @@ var PS = function (_Component2) {
 
 /***/ }),
 /* 2 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+/* harmony export (immutable) */ __webpack_exports__["a"] = diffObject;
+/* unused harmony export getKeyObjMap */
+/**
+ * Created by apple on 2017/8/30.
+ */
+function diffObject(leftProps, rightProps) {
+    const onlyInLeft = {};
+    const bothLeft = {};
+    const bothRight = {};
+    const onlyInRight = {};
+
+    for (let key in leftProps) {
+        if (rightProps[key] === undefined) {
+            onlyInLeft[key] = leftProps[key];
+        } else {
+            bothLeft[key] = leftProps[key];
+            bothRight[key] = rightProps[key];
+        }
+    }
+
+    for (let key in rightProps) {
+        if (leftProps[key] === undefined) {
+            onlyInRight[key] = rightProps[key];
+        }
+    }
+
+    return {
+        onlyInRight,
+        onlyInLeft,
+        bothIn: {
+            left: bothLeft,
+            right: bothRight
+        }
+    };
+}
+
+function getKeyObjMap(arr) {
+    const result = {};
+    arr.forEach(element => {
+        result[element.key] = element;
+    });
+    return result;
+}
+
+/***/ }),
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -302,7 +504,7 @@ function getDOM(comp) {
 }
 
 /***/ }),
-/* 3 */
+/* 4 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -319,11 +521,20 @@ Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
  * @param children
  */
 function createElement(comp, props, ...args) {
-  return {
-    nodeName: comp,
-    props: props || {},
-    children: args || []
-  };
+    let children = [];
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] instanceof Array) {
+            children = children.concat(args[i]);
+        } else {
+            children.push(args[i]);
+        }
+    }
+
+    return {
+        nodeName: comp,
+        props: props || {},
+        children
+    };
 }
 
 /***/ })
