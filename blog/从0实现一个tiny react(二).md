@@ -41,10 +41,11 @@ class AppWithNoVDOM extends Component {
 }
 ```
 我们在 render之前 设置下时间点。 在10000万个div的情况下， 第一次render和setState触发的render 耗时大概在180ms （可能跟机器配置有关）
-首次render将会创建大量的DOM元素， 耗时不可避免。 但是之后的渲染， 完全是可以复用之前创建的dom的（实际上DOM一点也没改）。 毕竟dom操作是很慢
+首次render将会创建大量的DOM元素， 耗时不可避免。 但是setState引起的渲染， 完全是可以复用之前创建的dom的, 因为这里只是调用一下setState，并没有实质操作， 实际上DOM一点也没改。 <br/>
+毕竟dom操作是很慢
 
 ### 复用DOM
-在 [(一)]() 里面对于每一个判定为 dom类型的VDOM， 是直接创建一个新的DOM：
+回想一下, 在 [(一)](https://segmentfault.com/a/1190000010822571) 里面对于每一个判定为 dom类型的VDOM， 是直接创建一个新的DOM：
 ```javascript 1.7
 ...
 else if(typeof vnode.nodeName == "string") {
@@ -53,7 +54,7 @@ else if(typeof vnode.nodeName == "string") {
 } 
 ...
 ```
-就是根据olddom（render的第四个参数) 来决定是否复用， 如何复用。 <br/>
+现在要根据olddom（render的第四个参数) 来决定是否复用， 如何复用。 <br/>
 考虑这种情况：假如一个组件， 初次渲染为 renderBefore， 调用setState再次渲染为 renderAfter  调用setState再再次渲染为 renderAfterAfter。 VDOM如下
 ```javascript 1.7
 const renderBefore = {
