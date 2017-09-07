@@ -359,7 +359,7 @@ if(typeof vnode == "string" || typeof vnode == "number") {
 重新 跑一下开头 的例子 [新的复用DOM演示](http://jsfiddle.net/yankang/cyc4ss5c/) setState后渲染时间变成了 20ms 左右。 从 180ms 到20ms 差不多快有一个数量级的差距了。 
 到底快了多少，取决于前后结构的相似程度， 如果前后结构基本相同，diff是有意义的减少了DOM操作。
 
-##### 复用子节点 - **key**
+### 复用子节点 - **key**
 ```javascript 1.7
 初始渲染
 ...
@@ -397,7 +397,7 @@ f([{key: 'wca'}, {key: 'wcb}, {key: 'wcc}]) = [{key:'spanhi'}, {key: 'wca'}, {ke
 对于这个问题， 我将会另开一篇文章
 
 ### 总结
-通过 diff 比较渲染前后 DOM的差别来复用实际的， 我们的性能得到了提高。现在 render方法的描述： 
+通过 diff 比较渲染前后 DOM的差别来复用实际的， 我们的性能得到了提高。现在 render方法的描述： <br/>
 render 方法是根据的vnode， 渲染到实际的dom，如果存在olddom会先尝试复用的 一个递归方法 (由于组件 最终一定会render html的标签。 所以这个递归一定是能够正常返回的)
    * vnode是字符串， 如果存在olddom， 且可以复用， 复用之。否则创建textNode节点
    * 当vnode.nodeName是 字符串的时候， 如果存在olddom， 且可以复用， 复用之。否则创建dom节点， 根据props设置节点属性， 遍历render children
