@@ -402,6 +402,8 @@ render 方法是根据的vnode， 渲染到实际的dom，如果存在olddom会�
    * vnode是字符串， 如果存在olddom， 且可以复用， 复用之。否则创建textNode节点
    * 当vnode.nodeName是 字符串的时候， 如果存在olddom， 且可以复用， 复用之。否则创建dom节点， 根据props设置节点属性， 遍历render children
    * 当vnode.nodeName是 function的时候， 获取render方法的返回值 vnode'， 执行render(vnode')
+   
+[本文代码git地址](https://github.com/ykforerlang/tinyreact)
 
 
 
