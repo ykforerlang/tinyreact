@@ -1,5 +1,5 @@
 # 从0实现一个tiny react（二）
-考虑一下下面的这个例子 [在线演示地址](http://jsfiddle.net/yankang/z0e9ngwL/): 
+考虑一下这个例子 [在线演示地址](http://jsfiddle.net/yankang/z0e9ngwL/): 
 ```javascript 1.7
 class AppWithNoVDOM extends Component {
     constructor(props) {
@@ -39,8 +39,26 @@ class AppWithNoVDOM extends Component {
         )
     }
 }
+
+const startTime = new Date().getTime()
+render(<App/>, document.getElementById("root"))
+console.log("duration:", new Date().getTime() - startTime)
+
+
+...
+setState(state) {
+    setTimeout(() => {
+        this.state = state
+        const vnode = this.render()
+        let olddom = getDOM(this)
+        const startTime = new Date().getTime()
+        render(vnode, olddom.parentNode, this, olddom)
+        console.log("duration:", new Date().getTime() - startTime)
+    }, 0)
+}
+...
 ```
-我们在 render之前 设置下时间点。 在10000万个div的情况下， 第一次render和setState触发的render 耗时大概在180ms （可能跟机器配置有关）
+我们在 render, setState 设置下时间点。 在10000万个div的情况下， 第一次render和setState触发的render 耗时大概在180ms （可能跟机器配置有关）
 首次render将会创建大量的DOM元素， 耗时不可避免。 但是setState引起的渲染， 完全是可以复用之前创建的dom的, 因为这里只是调用一下setState，并没有实质操作， 实际上DOM一点也没改。 <br/>
 毕竟dom操作是很慢
 
@@ -54,7 +72,7 @@ else if(typeof vnode.nodeName == "string") {
 } 
 ...
 ```
-现在要根据olddom（render的第四个参数) 来决定是否复用， 如何复用。 <br/>
+一定要创建一个  新的DOM 结构吗？<br/>
 考虑这种情况：假如一个组件， 初次渲染为 renderBefore， 调用setState再次渲染为 renderAfter  调用setState再再次渲染为 renderAfterAfter。 VDOM如下
 ```javascript 1.7
 const renderBefore = {
@@ -81,8 +99,8 @@ const renderAfterAfter = {
     children:[vnode1, vnode2, vnode3]
 }
 ```
-renderBefore 和renderAfter 都是div， props和children有部分区别，可以通过DOM操作把 rederBefore 变化为renderAfter。 而 renderAfter和renderAfterAfter
-属于不同的DOM类型， 浏览器还没提供修改DOM类型的Api，是无法复用的。
+renderBefore 和renderAfter 都是div， props和children有部分区别，可以通过DOM操作把 rederBefore 变化为renderAfter， 从而避开DOM创建。 而 renderAfter和renderAfterAfter
+属于不同的DOM类型， 浏览器还没提供修改DOM类型的Api，是无法复用的， 是一定要创建新的DOM的。
 
 可以得出几个原则如下： 
   * 不同元素类型是无法复用的， span 是无法变成 div的。  
@@ -90,7 +108,7 @@ renderBefore 和renderAfter 都是div， props和children有部分区别，可�
      * 更新属性， 
      * 复用子节点。
 
-so， 当 vnode.nodeName == "string" 的时候：
+现在的代码可能是这样的：
 ```javascript 1.7
 ...
 else if(typeof vnode.nodeName == "string") {
@@ -103,8 +121,7 @@ else if(typeof vnode.nodeName == "string") {
 ...
 ``` 
 ##### 更新属性
-对于 renderBefore => renderAfter 。 属性部分：
-需要做3件事情。 
+对于 renderBefore => renderAfter 。 属性部分需要做3件事情。 
 1. renderBefore 和 renderAfter 的属性交集  如果值不同， 更新值 updateAttr
 2. renderBefore 和 renderAfter 的属性差集  置空  removeAttr
 3. renderAfter 和 renderBefore 的属性差集  设置新值 setAttr
@@ -256,7 +273,7 @@ function diffAttrs(dom, newProps, oldProps) {
     }
 }
 ```
-olddom 经过上面, '新'的dom结构 属性和  renderAfter对应了。<br/>
+'新'的dom结构 属性和  renderAfter对应了。<br/>
 但是 children部分 还是之前的
 #### 操作子节点
 之前 操作子节点的代码： 
@@ -380,7 +397,11 @@ f([{key: 'wca'}, {key: 'wcb}, {key: 'wcc}]) = [{key:'spanhi'}, {key: 'wca'}, {ke
 对于这个问题， 我将会另开一篇文章
 
 ### 总结
-通过 diff 比较渲染前后 DOM的差别来复用实际的， 我们的性能得到了提高。
+通过 diff 比较渲染前后 DOM的差别来复用实际的， 我们的性能得到了提高。现在 render方法的描述： 
+render 方法是根据的vnode， 渲染到实际的dom，如果存在olddom会先尝试复用的 一个递归方法 (由于组件 最终一定会render html的标签。 所以这个递归一定是能够正常返回的)
+   * vnode是字符串， 如果存在olddom， 且可以复用， 复用之。否则创建textNode节点
+   * 当vnode.nodeName是 字符串的时候， 如果存在olddom， 且可以复用， 复用之。否则创建dom节点， 根据props设置节点属性， 遍历render children
+   * 当vnode.nodeName是 function的时候， 获取render方法的返回值 vnode'， 执行render(vnode')
 
 
 
