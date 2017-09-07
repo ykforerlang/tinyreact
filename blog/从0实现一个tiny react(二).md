@@ -81,13 +81,16 @@ const renderAfterAfter = {
     children:[vnode1, vnode2, vnode3]
 }
 ```
+renderBefore 和renderAfter 都是div， props和children有部分区别，可以通过DOM操作把 rederBefore 变化为renderAfter。 而 renderAfter和renderAfterAfter
+属于不同的DOM类型， 浏览器还没提供修改DOM类型的Api，是无法复用的。
+
 可以得出几个原则如下： 
   * 不同元素类型是无法复用的， span 是无法变成 div的。  
   * 对于相同元素: 
      * 更新属性， 
-     * 循环复用子节点。
+     * 复用子节点。
 
-现在当 vnode.nodeName == "string" 的时候， 代码应该是这样的：
+so， 当 vnode.nodeName == "string" 的时候：
 ```javascript 1.7
 ...
 else if(typeof vnode.nodeName == "string") {
@@ -262,7 +265,7 @@ for(let i = 0; i < vnode.children.length; i++) {
     render(vnode.children[i], dom, null, null)
 }
 ```
-render 的第3个参数comp '谁渲染了我'， 第4个参数olddom '之前的旧dom元素'。现在复用旧的dom， 代码如下： 
+render 的第3个参数comp '谁渲染了我'， 第4个参数olddom '之前的旧dom元素'。现在复用旧的dom， 所以第4个参数可能是有值的 代码如下： 
 ```javascript 1.7
 let olddomChild = olddom.firstChild
 for(let i = 0; i < vnode.children.length; i++) {
@@ -301,7 +304,7 @@ function diffDOM(vnode, parent, comp, olddom) {
     olddom.__vnode = vnode  
 }
 ```
-由于需要在diffDOM的时候 从olddom获取 oldVNODE。 所以：
+由于需要在diffDOM的时候 从olddom获取 oldVNODE（即 diffObject(vnode.props, olddom.__vnode.props)）。 所以：
 ```javascript 1.7
 // 在创建的时候
 ...
@@ -314,7 +317,7 @@ dom.__vnode = vnode
 ...
 const {onlyInLeft, bothIn, onlyInRight} = diffObject(vnode.props, olddom.__vnode.props)
 ...
-olddom.__vnode = vnode  
+olddom.__vnode = vnode  // 更新完之后， 需要把__vnode的指向 更新
 ...
 ```
 另外 对于 TextNode的复用:
@@ -336,7 +339,8 @@ if(typeof vnode == "string" || typeof vnode == "number") {
     }
 ...
 ```
-重新 跑一下开头 的例子 [新的复用DOM演示](http://jsfiddle.net/yankang/cyc4ss5c/) setState后渲染时间变成了 20ms 左右。 从 180ms 到20ms 差不多快有一个数量级的差距了
+重新 跑一下开头 的例子 [新的复用DOM演示](http://jsfiddle.net/yankang/cyc4ss5c/) setState后渲染时间变成了 20ms 左右。 从 180ms 到20ms 差不多快有一个数量级的差距了。 
+到底快了多少，取决于前后结构的相似程度， 如果前后结构基本相同，diff是有意义的减少了DOM操作。
 
 ##### 复用子节点 - **key**
 ```javascript 1.7
