@@ -120,7 +120,7 @@ else if(typeof vnode.nodeName == "string") {
 }
 ...
 ``` 
-##### 更新属性
+#### 更新属性
 对于 renderBefore => renderAfter 。 属性部分需要做3件事情。 
 1. renderBefore 和 renderAfter 的属性交集  如果值不同， 更新值 updateAttr
 2. renderBefore 和 renderAfter 的属性差集  置空  removeAttr
@@ -359,7 +359,7 @@ if(typeof vnode == "string" || typeof vnode == "number") {
 重新 跑一下开头 的例子 [新的复用DOM演示](http://jsfiddle.net/yankang/cyc4ss5c/) setState后渲染时间变成了 20ms 左右。 从 180ms 到20ms 差不多快有一个数量级的差距了。 
 到底快了多少，取决于前后结构的相似程度， 如果前后结构基本相同，diff是有意义的减少了DOM操作。
 
-### 复用子节点 - **key**
+#### 复用子节点 - **key**
 ```javascript 1.7
 初始渲染
 ...
