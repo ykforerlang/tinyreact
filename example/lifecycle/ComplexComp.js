@@ -1,7 +1,6 @@
-import render from '../../src/render'
-import Component from './Component'  // 由于Component 是es6写法的class， 放在项目外。导入babel不会处理
-import createElement from '../../src/createElement'
-import RenderedHelper from './RenderedHelper'
+import Component from '../../lib/Component'
+import createElement from '../../lib/createElement'
+import RenderedHelper from '../../lib/RenderedHelper'
 
 class TestAppA extends Component {
     constructor(props) {
@@ -138,19 +137,81 @@ class TestAppC extends Component {
     }
 }
 
+
+class TestAppD extends Component {
+    constructor(props) {
+        super(props)
+        console.log("TestAppD constructor")
+    }
+
+    componentWillMount() {
+        console.log("TestAppD componentWillMount")
+    }
+
+    componentDidMount() {
+        console.log("TestAppD componentDidMount")
+    }
+
+    componentWillReceiveProps(nextProps) {
+        console.log("TestAppD componentWillReceiveProps")
+    }
+
+    shouldComponentUpdate(nextProps, nextState) {
+        console.log("TestAppD shouldComponentUpdate", nextProps, nextState)
+        return true
+    }
+
+    componentWillUpdate() {
+        console.log("TestAppD componentWillUpdate")
+    }
+
+    componentDidUpdate() {
+        console.log("TestAppD componentDidUpdate")
+    }
+
+    componentWillUnmount() {
+        console.log("TestAppD componentWillUnmount")
+    }
+
+
+
+    render() {
+        console.log("TestAppD render")
+        if (this.props.text === "testA") {
+            return <TestAppA/>
+        } else if (this.props.text === "testB") {
+            return <TestAppB/>
+        } else {
+            return <TestAppC/>
+        }
+    }
+}
+
 /// app1
 
 export default class ComplexComp extends Component {
+    constructor(props) {
+        super(props)
+        this.state = {
+            odd: false
+        }
+    }
+
     render() {
         return (
-            <div onClick={e => this.setState({})}>
+            <div onClick={e => this.setState({
+                odd: !this.state.odd
+            })}>
                 <div>
                     <div>
                         <TestAppA/>
+                        <TestAppD text={this.state.odd ? "testB": "testC"}/>
                     </div>
-                    <TestAppB/>
+                    {this.state.odd && <TestAppB/>}
                 </div>
                 <TestAppC/>
+                {!this.state.odd && <TestAppA/>}
+                <TestAppD text={this.state.odd ? "testB": "testC"}/>
             </div>
         )
     }

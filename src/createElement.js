@@ -11,6 +11,7 @@
 export default function createElement(comp, props, ...args) {
     let children = []
     for(let i = 0; i< args.length;i++){
+        if (typeof args[i] === 'boolean' || args[i] === undefined || args === null) continue
         if(args[i] instanceof Array) {
             children = children.concat(args[i])
         } else {

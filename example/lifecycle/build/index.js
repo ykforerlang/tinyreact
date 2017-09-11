@@ -60,230 +60,11 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 4);
+/******/ 	return __webpack_require__(__webpack_require__.s = 5);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony export (immutable) */ __webpack_exports__["default"] = render;
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__util__ = __webpack_require__(5);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__RenderedHelper__ = __webpack_require__(6);
-/**
- * Created by apple on 2017/8/21.
- */
-
-
-
-/**
- * 渲染vnode成实际的dom
- * @param vnode 虚拟dom表示
- * @param parent 实际渲染出来的dom，挂载的父元素
- * @param comp   谁渲染了我
- * @param olddomOrComp  老的dom/组件实例
- */
-function render(vnode, parent, comp, olddomOrComp) {
-    let dom;
-    if (typeof vnode === "string" || typeof vnode === "number") {
-        if (olddomOrComp && olddomOrComp.splitText) {
-            if (olddomOrComp.nodeValue !== vnode) {
-                olddomOrComp.nodeValue = vnode;
-            }
-        } else {
-            dom = document.createTextNode(vnode);
-            parent.__rendered.replaceNullPush(dom, olddomOrComp); //comp 一定是null
-
-            if (olddomOrComp) {
-                parent.replaceChild(dom, Object(__WEBPACK_IMPORTED_MODULE_0__util__["b" /* getDOM */])(olddomOrComp));
-            } else {
-                parent.appendChild(dom);
-            }
-        }
-    } else if (typeof vnode.nodeName === "string") {
-        if (!olddomOrComp || olddomOrComp.nodeName !== vnode.nodeName.toUpperCase()) {
-            createNewDom(vnode, parent, comp, olddomOrComp);
-        } else {
-            diffDOM(vnode, parent, comp, olddomOrComp);
-        }
-    } else if (typeof vnode.nodeName === "function") {
-        let func = vnode.nodeName;
-        let inst;
-        if (olddomOrComp && olddomOrComp instanceof func) {
-            inst = olddomOrComp;
-            inst.props = vnode.props;
-        } else {
-            inst = new func(vnode.props);
-
-            if (comp) {
-                comp.__rendered = inst;
-            } else {
-                parent.__rendered.replaceNullPush(inst, olddomOrComp);
-            }
-        }
-
-        let innerVnode = inst.render();
-        render(innerVnode, parent, inst, inst.__rendered);
-    }
-}
-
-function setAttrs(dom, props) {
-    const allKeys = Object.keys(props);
-    allKeys.forEach(k => {
-        const v = props[k];
-
-        if (k == "className") {
-            dom.setAttribute("class", v);
-            return;
-        }
-
-        if (k == "style") {
-            if (typeof v == "string") {
-                dom.style.cssText = v; //IE
-            }
-
-            if (typeof v == "object") {
-                for (let i in v) {
-                    dom.style[i] = v[i];
-                }
-            }
-            return;
-        }
-
-        if (k[0] == "o" && k[1] == "n") {
-            const capture = k.indexOf("Capture") != -1;
-            dom.addEventListener(k.substring(2).toLowerCase(), v, capture);
-            return;
-        }
-
-        dom.setAttribute(k, v);
-    });
-}
-
-function removeAttrs(dom, props) {
-    for (let k in props) {
-        if (k == "className") {
-            dom.removeAttribute("class");
-            continue;
-        }
-
-        if (k == "style") {
-            dom.style.cssText = ""; //IE
-            continue;
-        }
-
-        if (k[0] == "o" && k[1] == "n") {
-            const capture = k.indexOf("Capture") != -1;
-            const v = props[k];
-            dom.removeEventListener(k.substring(2).toLowerCase(), v, capture);
-            continue;
-        }
-
-        dom.removeAttribute(k);
-    }
-}
-
-/**
- *  调用者保证newProps 与 oldProps 的keys是相同的
- * @param dom
- * @param newProps
- * @param oldProps
- */
-function diffAttrs(dom, newProps, oldProps) {
-    for (let k in newProps) {
-        let v = newProps[k];
-        let ov = oldProps[k];
-        if (v === ov) continue;
-
-        if (k == "className") {
-            dom.setAttribute("class", v);
-            continue;
-        }
-
-        if (k == "style") {
-            if (typeof v == "string") {
-                dom.style.cssText = v;
-            } else if (typeof v == "object" && typeof ov == "object") {
-                for (let vk in v) {
-                    if (v[vk] !== ov[vk]) {
-                        dom.style[vk] = v[vk];
-                    }
-                }
-
-                for (let ovk in ov) {
-                    if (v[ovk] === undefined) {
-                        dom.style[ovk] = "";
-                    }
-                }
-            } else {
-                //typeof v == "object" && typeof ov == "string"
-                dom.style = {};
-                for (let vk in v) {
-                    dom.style[vk] = v[vk];
-                }
-            }
-            continue;
-        }
-
-        if (k[0] == "o" && k[1] == "n") {
-            const capture = k.indexOf("Capture") != -1;
-            let eventKey = k.substring(2).toLowerCase();
-            dom.removeEventListener(eventKey, ov, capture);
-            dom.addEventListener(eventKey, v, capture);
-            continue;
-        }
-
-        dom.setAttribute(k, v);
-    }
-}
-
-function createNewDom(vnode, parent, comp, olddomOrComp) {
-    let dom = document.createElement(vnode.nodeName);
-
-    dom.__rendered = new __WEBPACK_IMPORTED_MODULE_1__RenderedHelper__["a" /* default */]();
-    dom.__vnode = vnode;
-
-    if (comp) {
-        comp.__rendered = dom;
-    } else {
-        parent.__rendered.replaceNullPush(dom, olddomOrComp);
-    }
-
-    setAttrs(dom, vnode.props);
-
-    if (olddomOrComp) {
-        parent.replaceChild(dom, Object(__WEBPACK_IMPORTED_MODULE_0__util__["b" /* getDOM */])(olddomOrComp));
-    } else {
-        parent.appendChild(dom);
-    }
-
-    for (let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], dom, null, null);
-    }
-}
-
-function diffDOM(vnode, parent, comp, olddom) {
-    const { onlyInLeft, bothIn, onlyInRight } = Object(__WEBPACK_IMPORTED_MODULE_0__util__["a" /* diffObject */])(vnode.props, olddom.__vnode.props);
-    setAttrs(olddom, onlyInLeft);
-    removeAttrs(olddom, onlyInRight);
-    diffAttrs(olddom, bothIn.left, bothIn.right);
-
-    olddom.__rendered.slice(vnode.children.length).forEach(element => {
-        olddom.removeChild(Object(__WEBPACK_IMPORTED_MODULE_0__util__["b" /* getDOM */])(element));
-    });
-
-    const __renderedArr = olddom.__rendered.slice(0, vnode.children.length);
-    olddom.__rendered = new __WEBPACK_IMPORTED_MODULE_1__RenderedHelper__["a" /* default */](__renderedArr);
-    for (let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, __renderedArr[i]);
-    }
-    olddom.__vnode = vnode;
-}
-
-/***/ }),
-/* 1 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -293,18 +74,33 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Created by apple on 2017/7/20.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}(); /**
+      * Created by apple on 2017/7/20.
+      */
 
-
-var _render = __webpack_require__(0);
+var _render = __webpack_require__(2);
 
 var _render2 = _interopRequireDefault(_render);
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _util = __webpack_require__(3);
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError("Cannot call a class as a function");
+    }
+}
 
 var Component = function () {
     function Component(props) {
@@ -321,8 +117,10 @@ var Component = function () {
             setTimeout(function () {
                 _this.state = state;
                 var vnode = _this.render();
-                var olddom = getDOM(_this);
+                var olddom = (0, _util.getDOM)(_this);
+                var startTime = new Date().getTime();
                 (0, _render2.default)(vnode, olddom.parentNode, _this, _this.__rendered);
+                console.log("duration:", new Date().getTime() - startTime);
             }, 0);
         }
     }]);
@@ -332,52 +130,8 @@ var Component = function () {
 
 exports.default = Component;
 
-
-function getDOM(comp) {
-    var rendered = comp.__rendered;
-    while (rendered instanceof Component) {
-        //判断对象是否是dom
-        rendered = rendered.__rendered;
-    }
-    return rendered;
-}
-
 /***/ }),
-/* 2 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony export (immutable) */ __webpack_exports__["default"] = createElement;
-/**
- * Created by apple on 2017/7/16.
- */
-
-/**
- *
- * @param comp func or div/p/span/..
- * @param props {}
- * @param children
- */
-function createElement(comp, props, ...args) {
-    let children = [];
-    for (let i = 0; i < args.length; i++) {
-        if (args[i] instanceof Array) {
-            children = children.concat(args[i]);
-        } else {
-            children.push(args[i]);
-        }
-    }
-
-    return {
-        nodeName: comp,
-        props: props || {},
-        children
-    };
-}
-
-/***/ }),
-/* 3 */
+/* 1 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -387,9 +141,21 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () {
+    function defineProperties(target, props) {
+        for (var i = 0; i < props.length; i++) {
+            var descriptor = props[i];descriptor.enumerable = descriptor.enumerable || false;descriptor.configurable = true;if ("value" in descriptor) descriptor.writable = true;Object.defineProperty(target, descriptor.key, descriptor);
+        }
+    }return function (Constructor, protoProps, staticProps) {
+        if (protoProps) defineProperties(Constructor.prototype, protoProps);if (staticProps) defineProperties(Constructor, staticProps);return Constructor;
+    };
+}();
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+        throw new TypeError("Cannot call a class as a function");
+    }
+}
 
 var RenderedHelper = function () {
     function RenderedHelper(arr) {
@@ -427,7 +193,358 @@ var RenderedHelper = function () {
 exports.default = RenderedHelper;
 
 /***/ }),
+/* 2 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var _typeof2 = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol" ? function (obj) {
+    return typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+} : function (obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj === "undefined" ? "undefined" : _typeof2(obj);
+}; /**
+    * Created by apple on 2017/8/21.
+    */
+
+exports.default = render;
+
+var _util = __webpack_require__(3);
+
+var _RenderedHelper = __webpack_require__(1);
+
+var _RenderedHelper2 = _interopRequireDefault(_RenderedHelper);
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+/**
+ * 渲染vnode成实际的dom
+ * @param vnode 虚拟dom表示
+ * @param parent 实际渲染出来的dom，挂载的父元素
+ * @param comp   谁渲染了我
+ * @param olddomOrComp  老的dom/组件实例
+ */
+function render(vnode, parent, comp, olddomOrComp) {
+    var dom = void 0;
+    if (typeof vnode === "string" || typeof vnode === "number") {
+        if (olddomOrComp && olddomOrComp.splitText) {
+            if (olddomOrComp.nodeValue !== vnode) {
+                olddomOrComp.nodeValue = vnode;
+            }
+        } else {
+            dom = document.createTextNode(vnode);
+            parent.__rendered.replaceNullPush(dom, olddomOrComp); //comp 一定是null
+
+            if (olddomOrComp) {
+                parent.replaceChild(dom, (0, _util.getDOM)(olddomOrComp));
+            } else {
+                parent.appendChild(dom);
+            }
+        }
+    } else if (typeof vnode.nodeName === "string") {
+        if (!olddomOrComp || olddomOrComp.nodeName !== vnode.nodeName.toUpperCase()) {
+            createNewDom(vnode, parent, comp, olddomOrComp);
+        } else {
+            diffDOM(vnode, parent, comp, olddomOrComp);
+        }
+    } else if (typeof vnode.nodeName === "function") {
+        var func = vnode.nodeName;
+        var inst = void 0;
+        if (olddomOrComp && olddomOrComp instanceof func) {
+            inst = olddomOrComp;
+            inst.props = vnode.props;
+        } else {
+            inst = new func(vnode.props);
+
+            if (olddomOrComp) {
+                parent.removeChild((0, _util.getDOM)(olddomOrComp));
+            }
+
+            if (comp) {
+                comp.__rendered = inst;
+            } else {
+                parent.__rendered.replaceNullPush(inst, olddomOrComp);
+            }
+        }
+
+        var innerVnode = inst.render();
+        render(innerVnode, parent, inst, inst.__rendered);
+    }
+}
+
+function setAttrs(dom, props) {
+    var allKeys = Object.keys(props);
+    allKeys.forEach(function (k) {
+        var v = props[k];
+
+        if (k == "className") {
+            dom.setAttribute("class", v);
+            return;
+        }
+
+        if (k == "style") {
+            if (typeof v == "string") {
+                dom.style.cssText = v; //IE
+            }
+
+            if ((typeof v === 'undefined' ? 'undefined' : _typeof(v)) == "object") {
+                for (var i in v) {
+                    dom.style[i] = v[i];
+                }
+            }
+            return;
+        }
+
+        if (k[0] == "o" && k[1] == "n") {
+            var capture = k.indexOf("Capture") != -1;
+            dom.addEventListener(k.substring(2).toLowerCase(), v, capture);
+            return;
+        }
+
+        dom.setAttribute(k, v);
+    });
+}
+
+function removeAttrs(dom, props) {
+    for (var k in props) {
+        if (k == "className") {
+            dom.removeAttribute("class");
+            continue;
+        }
+
+        if (k == "style") {
+            dom.style.cssText = ""; //IE
+            continue;
+        }
+
+        if (k[0] == "o" && k[1] == "n") {
+            var capture = k.indexOf("Capture") != -1;
+            var v = props[k];
+            dom.removeEventListener(k.substring(2).toLowerCase(), v, capture);
+            continue;
+        }
+
+        dom.removeAttribute(k);
+    }
+}
+
+/**
+ *  调用者保证newProps 与 oldProps 的keys是相同的
+ * @param dom
+ * @param newProps
+ * @param oldProps
+ */
+function diffAttrs(dom, newProps, oldProps) {
+    for (var k in newProps) {
+        var v = newProps[k];
+        var ov = oldProps[k];
+        if (v === ov) continue;
+
+        if (k == "className") {
+            dom.setAttribute("class", v);
+            continue;
+        }
+
+        if (k == "style") {
+            if (typeof v == "string") {
+                dom.style.cssText = v;
+            } else if ((typeof v === 'undefined' ? 'undefined' : _typeof(v)) == "object" && (typeof ov === 'undefined' ? 'undefined' : _typeof(ov)) == "object") {
+                for (var vk in v) {
+                    if (v[vk] !== ov[vk]) {
+                        dom.style[vk] = v[vk];
+                    }
+                }
+
+                for (var ovk in ov) {
+                    if (v[ovk] === undefined) {
+                        dom.style[ovk] = "";
+                    }
+                }
+            } else {
+                //typeof v == "object" && typeof ov == "string"
+                dom.style = {};
+                for (var _vk in v) {
+                    dom.style[_vk] = v[_vk];
+                }
+            }
+            continue;
+        }
+
+        if (k[0] == "o" && k[1] == "n") {
+            var capture = k.indexOf("Capture") != -1;
+            var eventKey = k.substring(2).toLowerCase();
+            dom.removeEventListener(eventKey, ov, capture);
+            dom.addEventListener(eventKey, v, capture);
+            continue;
+        }
+
+        dom.setAttribute(k, v);
+    }
+}
+
+function createNewDom(vnode, parent, comp, olddomOrComp) {
+    var dom = document.createElement(vnode.nodeName);
+
+    dom.__rendered = new _RenderedHelper2.default();
+    dom.__vnode = vnode;
+
+    if (comp) {
+        comp.__rendered = dom;
+    } else {
+        parent.__rendered.replaceNullPush(dom, olddomOrComp);
+    }
+
+    setAttrs(dom, vnode.props);
+
+    if (olddomOrComp) {
+        parent.replaceChild(dom, (0, _util.getDOM)(olddomOrComp));
+    } else {
+        parent.appendChild(dom);
+    }
+
+    for (var i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], dom, null, null);
+    }
+}
+
+function diffDOM(vnode, parent, comp, olddom) {
+    var _diffObject = (0, _util.diffObject)(vnode.props, olddom.__vnode.props),
+        onlyInLeft = _diffObject.onlyInLeft,
+        bothIn = _diffObject.bothIn,
+        onlyInRight = _diffObject.onlyInRight;
+
+    setAttrs(olddom, onlyInLeft);
+    removeAttrs(olddom, onlyInRight);
+    diffAttrs(olddom, bothIn.left, bothIn.right);
+
+    olddom.__rendered.slice(vnode.children.length).forEach(function (element) {
+        olddom.removeChild((0, _util.getDOM)(element));
+    });
+
+    var __renderedArr = olddom.__rendered.slice(0, vnode.children.length);
+    olddom.__rendered = new _RenderedHelper2.default(__renderedArr);
+    for (var i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], olddom, null, __renderedArr[i]);
+    }
+    olddom.__vnode = vnode;
+}
+
+/***/ }),
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.diffObject = diffObject;
+exports.getDOM = getDOM;
+
+var _Component = __webpack_require__(0);
+
+var _Component2 = _interopRequireDefault(_Component);
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+function diffObject(leftProps, rightProps) {
+    var onlyInLeft = {};
+    var bothLeft = {};
+    var bothRight = {};
+    var onlyInRight = {};
+
+    for (var key in leftProps) {
+        if (rightProps[key] === undefined) {
+            onlyInLeft[key] = leftProps[key];
+        } else {
+            bothLeft[key] = leftProps[key];
+            bothRight[key] = rightProps[key];
+        }
+    }
+
+    for (var _key in rightProps) {
+        if (leftProps[_key] === undefined) {
+            onlyInRight[_key] = rightProps[_key];
+        }
+    }
+
+    return {
+        onlyInRight: onlyInRight,
+        onlyInLeft: onlyInLeft,
+        bothIn: {
+            left: bothLeft,
+            right: bothRight
+        }
+    };
+} /**
+   * Created by apple on 2017/8/30.
+   */
+function getDOM(comp) {
+    var rendered = comp.__rendered;
+    while (rendered instanceof _Component2.default) {
+        //判断对象是否是dom
+        rendered = rendered.__rendered;
+    }
+    return rendered;
+}
+
+/***/ }),
 /* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.default = createElement;
+/**
+ * Created by apple on 2017/7/16.
+ */
+
+/**
+ *
+ * @param comp func or div/p/span/..
+ * @param props {}
+ * @param children
+ */
+function createElement(comp, props) {
+    var children = [];
+
+    for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+        args[_key - 2] = arguments[_key];
+    }
+
+    for (var i = 0; i < args.length; i++) {
+        if (typeof args[i] === 'boolean' || args[i] === undefined || args === null) continue;
+        if (args[i] instanceof Array) {
+            children = children.concat(args[i]);
+        } else {
+            children.push(args[i]);
+        }
+    }
+
+    return {
+        nodeName: comp,
+        props: props || {},
+        children: children
+    };
+}
+
+/***/ }),
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -435,23 +552,23 @@ exports.default = RenderedHelper;
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _render = __webpack_require__(0);
+var _render = __webpack_require__(2);
 
 var _render2 = _interopRequireDefault(_render);
 
-var _Component3 = __webpack_require__(1);
+var _Component3 = __webpack_require__(0);
 
 var _Component4 = _interopRequireDefault(_Component3);
 
-var _createElement = __webpack_require__(2);
+var _createElement = __webpack_require__(4);
 
 var _createElement2 = _interopRequireDefault(_createElement);
 
-var _RenderedHelper = __webpack_require__(3);
+var _RenderedHelper = __webpack_require__(1);
 
 var _RenderedHelper2 = _interopRequireDefault(_RenderedHelper);
 
-var _ComplexComp = __webpack_require__(7);
+var _ComplexComp = __webpack_require__(6);
 
 var _ComplexComp2 = _interopRequireDefault(_ComplexComp);
 
@@ -461,8 +578,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } // 由于Component 是es6写法的class， 放在项目外。导入babel不会处理
-
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var TestApp = function (_Component) {
     _inherits(TestApp, _Component);
@@ -561,89 +677,7 @@ root.__rendered = new _RenderedHelper2.default();
 (0, _render2.default)((0, _createElement2.default)(_ComplexComp2.default, null), root);
 
 /***/ }),
-/* 5 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* harmony export (immutable) */ __webpack_exports__["a"] = diffObject;
-/* harmony export (immutable) */ __webpack_exports__["b"] = getDOM;
-/**
- * Created by apple on 2017/8/30.
- */
-function diffObject(leftProps, rightProps) {
-    const onlyInLeft = {};
-    const bothLeft = {};
-    const bothRight = {};
-    const onlyInRight = {};
-
-    for (let key in leftProps) {
-        if (rightProps[key] === undefined) {
-            onlyInLeft[key] = leftProps[key];
-        } else {
-            bothLeft[key] = leftProps[key];
-            bothRight[key] = rightProps[key];
-        }
-    }
-
-    for (let key in rightProps) {
-        if (leftProps[key] === undefined) {
-            onlyInRight[key] = rightProps[key];
-        }
-    }
-
-    return {
-        onlyInRight,
-        onlyInLeft,
-        bothIn: {
-            left: bothLeft,
-            right: bothRight
-        }
-    };
-}
-
-function getDOM(comp) {
-    let rendered = comp.__rendered;
-    while (rendered instanceof Component) {
-        //判断对象是否是dom
-        rendered = rendered.__rendered;
-    }
-    return rendered;
-}
-
-/***/ }),
 /* 6 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-class RenderedHelper {
-    constructor(arr) {
-        this.__arr = arr || [];
-    }
-
-    replaceNullPush(now, old) {
-        if (!old) {
-            now.__renderedHelperTag = `${this.__arr.length}`;
-            this.__arr.push(now);
-        } else {
-            if (this.__arr[old.__renderedHelperTag] === old) {
-                now.__renderedHelperTag = old.__renderedHelperTag;
-                this.__arr[now.__renderedHelperTag] = now;
-            } else {
-                now.__renderedHelperTag = `${this.__arr.length}`;
-                this.__arr.push(now);
-            }
-        }
-    }
-
-    slice(start, end) {
-        return this.__arr.slice(start, end);
-    }
-}
-/* harmony export (immutable) */ __webpack_exports__["a"] = RenderedHelper;
-
-
-/***/ }),
-/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -655,19 +689,15 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _render = __webpack_require__(0);
+var _Component6 = __webpack_require__(0);
 
-var _render2 = _interopRequireDefault(_render);
+var _Component7 = _interopRequireDefault(_Component6);
 
-var _Component5 = __webpack_require__(1);
-
-var _Component6 = _interopRequireDefault(_Component5);
-
-var _createElement = __webpack_require__(2);
+var _createElement = __webpack_require__(4);
 
 var _createElement2 = _interopRequireDefault(_createElement);
 
-var _RenderedHelper = __webpack_require__(3);
+var _RenderedHelper = __webpack_require__(1);
 
 var _RenderedHelper2 = _interopRequireDefault(_RenderedHelper);
 
@@ -677,8 +707,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } // 由于Component 是es6写法的class， 放在项目外。导入babel不会处理
-
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var TestAppA = function (_Component) {
     _inherits(TestAppA, _Component);
@@ -741,7 +770,7 @@ var TestAppA = function (_Component) {
     }]);
 
     return TestAppA;
-}(_Component6.default);
+}(_Component7.default);
 
 var TestAppB = function (_Component2) {
     _inherits(TestAppB, _Component2);
@@ -804,7 +833,7 @@ var TestAppB = function (_Component2) {
     }]);
 
     return TestAppB;
-}(_Component6.default);
+}(_Component7.default);
 
 var TestAppC = function (_Component3) {
     _inherits(TestAppC, _Component3);
@@ -867,28 +896,100 @@ var TestAppC = function (_Component3) {
     }]);
 
     return TestAppC;
-}(_Component6.default);
+}(_Component7.default);
+
+var TestAppD = function (_Component4) {
+    _inherits(TestAppD, _Component4);
+
+    function TestAppD(props) {
+        _classCallCheck(this, TestAppD);
+
+        var _this4 = _possibleConstructorReturn(this, (TestAppD.__proto__ || Object.getPrototypeOf(TestAppD)).call(this, props));
+
+        console.log("TestAppD constructor");
+        return _this4;
+    }
+
+    _createClass(TestAppD, [{
+        key: 'componentWillMount',
+        value: function componentWillMount() {
+            console.log("TestAppD componentWillMount");
+        }
+    }, {
+        key: 'componentDidMount',
+        value: function componentDidMount() {
+            console.log("TestAppD componentDidMount");
+        }
+    }, {
+        key: 'componentWillReceiveProps',
+        value: function componentWillReceiveProps(nextProps) {
+            console.log("TestAppD componentWillReceiveProps");
+        }
+    }, {
+        key: 'shouldComponentUpdate',
+        value: function shouldComponentUpdate(nextProps, nextState) {
+            console.log("TestAppD shouldComponentUpdate", nextProps, nextState);
+            return true;
+        }
+    }, {
+        key: 'componentWillUpdate',
+        value: function componentWillUpdate() {
+            console.log("TestAppD componentWillUpdate");
+        }
+    }, {
+        key: 'componentDidUpdate',
+        value: function componentDidUpdate() {
+            console.log("TestAppD componentDidUpdate");
+        }
+    }, {
+        key: 'componentWillUnmount',
+        value: function componentWillUnmount() {
+            console.log("TestAppD componentWillUnmount");
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            console.log("TestAppD render");
+            if (this.props.text === "testA") {
+                return (0, _createElement2.default)(TestAppA, null);
+            } else if (this.props.text === "testB") {
+                return (0, _createElement2.default)(TestAppB, null);
+            } else {
+                return (0, _createElement2.default)(TestAppC, null);
+            }
+        }
+    }]);
+
+    return TestAppD;
+}(_Component7.default);
 
 /// app1
 
-var ComplexComp = function (_Component4) {
-    _inherits(ComplexComp, _Component4);
+var ComplexComp = function (_Component5) {
+    _inherits(ComplexComp, _Component5);
 
-    function ComplexComp() {
+    function ComplexComp(props) {
         _classCallCheck(this, ComplexComp);
 
-        return _possibleConstructorReturn(this, (ComplexComp.__proto__ || Object.getPrototypeOf(ComplexComp)).apply(this, arguments));
+        var _this5 = _possibleConstructorReturn(this, (ComplexComp.__proto__ || Object.getPrototypeOf(ComplexComp)).call(this, props));
+
+        _this5.state = {
+            odd: false
+        };
+        return _this5;
     }
 
     _createClass(ComplexComp, [{
         key: 'render',
         value: function render() {
-            var _this5 = this;
+            var _this6 = this;
 
             return (0, _createElement2.default)(
                 'div',
                 { onClick: function onClick(e) {
-                        return _this5.setState({});
+                        return _this6.setState({
+                            odd: !_this6.state.odd
+                        });
                     } },
                 (0, _createElement2.default)(
                     'div',
@@ -896,17 +997,34 @@ var ComplexComp = function (_Component4) {
                     (0, _createElement2.default)(
                         'div',
                         null,
-                        (0, _createElement2.default)(TestAppA, null)
+                        (0, _createElement2.default)(TestAppA, null),
+                        (0, _createElement2.default)(TestAppD, { text: this.state.odd ? "testB" : "testC" })
                     ),
-                    (0, _createElement2.default)(TestAppB, null)
+                    this.state.odd && (0, _createElement2.default)(TestAppB, null)
                 ),
-                (0, _createElement2.default)(TestAppC, null)
+                (0, _createElement2.default)(TestAppC, null),
+                !this.state.odd && (0, _createElement2.default)(TestAppA, null),
+                (0, _createElement2.default)(TestAppD, { text: this.state.odd ? "testB" : "testC" })
             );
         }
     }]);
 
     return ComplexComp;
-}(_Component6.default);
+}(_Component7.default);
+
+/**
+ A
+ C
+ C
+ A
+
+
+ A
+ B
+ B
+ C
+ */
+
 
 exports.default = ComplexComp;
 

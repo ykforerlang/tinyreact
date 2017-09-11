@@ -1,6 +1,7 @@
 /**
  * Created by apple on 2017/8/30.
  */
+import Component from './Component'
 export function diffObject(leftProps, rightProps) {
     const onlyInLeft = {}
     const bothLeft = {}

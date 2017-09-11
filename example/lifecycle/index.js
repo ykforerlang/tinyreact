@@ -1,7 +1,7 @@
-import render from '../../src/render'
-import Component from './Component'  // 由于Component 是es6写法的class， 放在项目外。导入babel不会处理
-import createElement from '../../src/createElement'
-import RenderedHelper from './RenderedHelper'
+import render from '../../lib/render'
+import Component from '../../lib/Component'
+import createElement from '../../lib/createElement'
+import RenderedHelper from '../../lib/RenderedHelper'
 import ComplexComp from './ComplexComp'
 
 class TestApp extends Component {

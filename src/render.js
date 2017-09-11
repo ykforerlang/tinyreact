@@ -43,6 +43,10 @@ export default function render(vnode, parent, comp, olddomOrComp) {
         } else {
             inst = new func(vnode.props)
 
+            if (olddomOrComp) {
+                parent.removeChild(getDOM(olddomOrComp))
+            }
+
             if (comp) {
                 comp.__rendered = inst
             } else {
