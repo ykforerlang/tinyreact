@@ -1,43 +1,57 @@
 /**
  * Created by apple on 2017/8/21.
  */
-import { diffObject } from './util'
+import { diffObject, getDOM } from './util'
+import RenderedHelper from './RenderedHelper'
+
 /**
  * 渲染vnode成实际的dom
  * @param vnode 虚拟dom表示
  * @param parent 实际渲染出来的dom，挂载的父元素
  * @param comp   谁渲染了我
- * @param olddom  老的dom
+ * @param olddomOrComp  老的dom/组件实例
  */
-export default function render(vnode, parent, comp, olddom) {
+export default function render(vnode, parent, comp, olddomOrComp) {
     let dom
-    if(typeof vnode == "string" || typeof vnode == "number" ) {
-        if(olddom && olddom.splitText) {
-            if(olddom.nodeValue !== vnode) {
-                olddom.nodeValue = vnode
+    if(typeof vnode === "string" || typeof vnode === "number" ) {
+        if(olddomOrComp && olddomOrComp.splitText) {
+            if(olddomOrComp.nodeValue !== vnode) {
+                olddomOrComp.nodeValue = vnode
             }
         } else {
             dom = document.createTextNode(vnode)
-            if(olddom) {
-                parent.replaceChild(dom, olddom)
+            parent.__rendered.replaceNullPush(dom, olddomOrComp) //comp 一定是null
+
+            if(olddomOrComp) {
+                parent.replaceChild(dom, getDOM(olddomOrComp))
             } else {
                 parent.appendChild(dom)
             }
         }
-    } else if(typeof vnode.nodeName == "string") {
-        if(!olddom || olddom.nodeName != vnode.nodeName.toUpperCase()) {
-            createNewDom(vnode, parent, comp, olddom)
+    } else if(typeof vnode.nodeName === "string") {
+        if(!olddomOrComp || olddomOrComp.nodeName !== vnode.nodeName.toUpperCase()) {
+            createNewDom(vnode, parent, comp, olddomOrComp)
         } else {
-            diffDOM(vnode, parent, comp, olddom)
+            diffDOM(vnode, parent, comp, olddomOrComp)
         }
-    } else if (typeof vnode.nodeName == "function") {
+    } else if (typeof vnode.nodeName === "function") {
         let func = vnode.nodeName
-        let inst = new func(vnode.props)
+        let inst
+        if(olddomOrComp && olddomOrComp instanceof func) {
+            inst = olddomOrComp
+            inst.props = vnode.props
+        } else {
+            inst = new func(vnode.props)
 
-        comp && (comp.__rendered = inst)
+            if (comp) {
+                comp.__rendered = inst
+            } else {
+                parent.__rendered.replaceNullPush(inst, olddomOrComp)
+            }
+        }
 
-        let innerVnode = func.prototype.render.call(inst)
-        render(innerVnode, parent, inst, olddom)
+        let innerVnode = inst.render()
+        render(innerVnode, parent, inst, inst.__rendered)
     }
 }
 
@@ -152,15 +166,22 @@ function diffAttrs(dom, newProps, oldProps) {
     }
 }
 
-function createNewDom(vnode, parent, comp, olddom) {
+function createNewDom(vnode, parent, comp, olddomOrComp) {
     let dom = document.createElement(vnode.nodeName)
 
+    dom.__rendered = new RenderedHelper()
     dom.__vnode = vnode
-    comp && (comp.__rendered = dom)
+
+    if (comp) {
+        comp.__rendered = dom
+    } else {
+        parent.replaceNullPush(dom, olddomOrComp)
+    }
+
     setAttrs(dom, vnode.props)
 
-    if(olddom) {
-        parent.replaceChild(dom, olddom)
+    if(olddomOrComp) {
+        parent.replaceChild(dom, getDOM(olddomOrComp))
     } else {
         parent.appendChild(dom)
     }
@@ -176,16 +197,16 @@ function diffDOM(vnode, parent, comp, olddom) {
     removeAttrs(olddom, onlyInRight)
     diffAttrs(olddom, bothIn.left, bothIn.right)
 
-    let olddomChild = olddom.firstChild
-    for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, olddomChild)
-        olddomChild = olddomChild && olddomChild.nextSibling
-    }
 
-    while (olddomChild) { //删除多余的子节点
-        let next = olddomChild.nextSibling
-        olddom.removeChild(olddomChild)
-        olddomChild = next
+    olddom.__rendered.slice(vnode.children.length)
+        .forEach(element => {
+            olddom.removeChild(getDOM(element))
+        })
+
+    const __renderedArr = olddom.__rendered.slice(0, vnode.children.length)
+    olddom.__rendered = new RenderedHelper(__renderedArr)
+    for(let i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], olddom, null, __renderedArr[i])
     }
     olddom.__vnode = vnode
 }

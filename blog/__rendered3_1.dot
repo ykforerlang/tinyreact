@@ -1,0 +1,17 @@
+digraph G {
+    Father -> Son[color= "red" label= "__rendered"]
+    Son -> Grandson[color= "red" label= "__rendered"]
+    Grandson -> div[color= "red" label= "__rendered"]
+
+    div -> Grandsonson1
+    div -> Grandsonson2
+    div -> Grandsonson3
+
+    Grandsonson1 -> Gsss1 -> Gssss1 -> a[color= "red" label= "__rendered"]
+    Grandsonson2 -> span[color= "red" label= "__rendered"]
+    span -> Gsss2_1
+    Gsss2_1 -> Gssss2_1[color= "red" label= "__rendered"]
+    span -> Gsss2_2
+    Gsss2_2 -> Gssss2_2[color= "red" label= "__rendered"]
+    Grandsonson3 -> p[color= "red" label= "__rendered"]
+}

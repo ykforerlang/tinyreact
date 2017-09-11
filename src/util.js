@@ -31,3 +31,12 @@ export function diffObject(leftProps, rightProps) {
         }
     }
 }
+
+
+export function getDOM(comp) {
+    let rendered = comp.__rendered
+    while (rendered instanceof Component) { //判断对象是否是dom
+        rendered = rendered.__rendered
+    }
+    return rendered
+}
