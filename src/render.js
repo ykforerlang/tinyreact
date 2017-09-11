@@ -175,7 +175,7 @@ function createNewDom(vnode, parent, comp, olddomOrComp) {
     if (comp) {
         comp.__rendered = dom
     } else {
-        parent.replaceNullPush(dom, olddomOrComp)
+        parent.__rendered.replaceNullPush(dom, olddomOrComp)
     }
 
     setAttrs(dom, vnode.props)

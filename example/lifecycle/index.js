@@ -2,6 +2,7 @@ import render from '../../src/render'
 import Component from './Component'  // 由于Component 是es6写法的class， 放在项目外。导入babel不会处理
 import createElement from '../../src/createElement'
 import RenderedHelper from './RenderedHelper'
+import ComplexComp from './ComplexComp'
 
 class TestApp extends Component {
     constructor(props) {
@@ -63,6 +64,7 @@ class App1 extends Component {
 }
 
 
+
 const root = document.getElementById("root")
 root.__rendered = new RenderedHelper()
-render(<App1/>, root)
+render(<ComplexComp/>, root)
