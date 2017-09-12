@@ -11,12 +11,24 @@ export default class Component {
 
     setState(state) {
         setTimeout(() => {
+            let shoudUpdate
+            if(this.shouldComponentUpdate) {
+                shoudUpdate = this.shouldComponentUpdate(this.props, state)
+            } else {
+                shoudUpdate = true
+            }
+
+            shoudUpdate && this.componentWillUpdate && this.componentWillUpdate(this.props, state)
             this.state = state
+
+            if (!shoudUpdate) {
+                return // do nothing just return
+            }
+
             const vnode = this.render()
             let olddom = getDOM(this)
-            const startTime = new Date().getTime()
             render(vnode, olddom.parentNode, this, this.__rendered)
-            console.log("duration:", new Date().getTime() - startTime)
+            this.componentDidUpdate && this.componentDidUpdate()
         }, 0)
     }
 }

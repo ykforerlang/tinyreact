@@ -39,9 +39,25 @@ export default function render(vnode, parent, comp, olddomOrComp) {
         let inst
         if(olddomOrComp && olddomOrComp instanceof func) {
             inst = olddomOrComp
+            inst.componentWillReceiveProps && inst.componentWillReceiveProps(vnode.props)
+
+            let shoudUpdate
+            if(inst.shouldComponentUpdate) {
+                shoudUpdate = inst.shouldComponentUpdate(vnode.props, olddomOrComp.state)
+            } else {
+                shoudUpdate = true
+            }
+
+
+            shoudUpdate && inst.componentWillUpdate && inst.componentWillUpdate(vnode.props, olddomOrComp.state)
             inst.props = vnode.props
+
+            if (!shoudUpdate) {
+                return // do nothing just return
+            }
         } else {
             inst = new func(vnode.props)
+            inst.componentWillMount && inst.componentWillMount()
 
             if (olddomOrComp) {
                 parent.removeChild(getDOM(olddomOrComp))
@@ -56,6 +72,12 @@ export default function render(vnode, parent, comp, olddomOrComp) {
 
         let innerVnode = inst.render()
         render(innerVnode, parent, inst, inst.__rendered)
+
+        if(olddomOrComp && olddomOrComp instanceof func) {
+            inst.componentDidUpdate && inst.componentDidUpdate()
+        } else {
+            inst.componentDidMount && inst.componentDidMount()
+        }
     }
 }
 
@@ -214,3 +236,4 @@ function diffDOM(vnode, parent, comp, olddom) {
     }
     olddom.__vnode = vnode
 }
+

@@ -21,4 +21,8 @@ export default class RenderedHelper {
     slice(start, end) {
         return this.__arr.slice(start, end)
     }
+
+    getInnerArr() {
+        return this.__arr
+    }
 }

@@ -291,7 +291,201 @@ function diffDOM(vnode, parent, comp, olddom) {
 现在 __rendered链 完善了， Father／ Gransson 的setState, 都会先去尝试复用 组件实例。 
 
 ### 生命周期
-前面讨论的__rendered 和生命周期有 什么关系呢？ 起码constructor 只调用一次了。。。
+前面讨论的__rendered 和生命周期有 什么关系呢？ 生命周期是组件实例的生命周期， 之前的工作起码保证了一点: constructor 只会被调用一次了吧。。。
+后面讨论的生命周期 都是基于 "组件实例"的 复用才有意义。tinyreact 将实现以下的生命周期：
+
+1. componentWillMount
+2. componentDidMount
+3. componentWillReceiveProps
+4. shouldComponentUpdate
+5. componentWillUpdate
+6. componentDidUpdate
+7. componentWillUnmount
+他们 和 react同名函数 含义相同
+
+##### componentWillMount, componentDidMount, componentDidUpdate
+这三个生命周期 是如此之简单： componentWillMount紧接着 创建实例的时候调用； 渲染完成之后，如果
+组件是新建的componentDidMount ， 否则：componentDidUpdate
+```jsx harmony
+else if (typeof vnode.nodeName === "function") {
+        let func = vnode.nodeName
+        let inst
+        if(olddomOrComp && olddomOrComp instanceof func) {
+            inst = olddomOrComp
+            inst.props = vnode.props
+        } else {
+            inst = new func(vnode.props)
+            inst.componentWillMount && inst.componentWillMount()  // <-- componentWillMount
+
+            if (olddomOrComp) {
+                parent.removeChild(getDOM(olddomOrComp))
+            }
+
+            if (comp) {
+                comp.__rendered = inst
+            } else {
+                parent.__rendered.replaceNullPush(inst, olddomOrComp)
+            }
+        }
+
+        let innerVnode = inst.render()
+        render(innerVnode, parent, inst, inst.__rendered)
+
+        if(olddomOrComp && olddomOrComp instanceof func) {  // <-- 如果组件 可以被复用
+            inst.componentDidUpdate && inst.componentDidUpdate()
+        } else {
+            inst.componentDidMount && inst.componentDidMount()
+        }
+    }
+```
+
+##### componentWillReceiveProps， shouldComponentUpdate， componentWillUpdate
+当组件 获取新的props的时候， 会调用componentWillReceiveProps， 参数为newProps， 并且在这个方法内部this.props 还是值向oldProps,
+由于  props的改变 由 只能由 父组件 触发。 所以只用在 render函数里面处理就ok。不过 要在 inst.props = vnode.props 之前调用componentWillReceiveProps:
+```jsx harmony
+else if (typeof vnode.nodeName === "function") {
+        let func = vnode.nodeName
+        let inst
+        if(olddomOrComp && olddomOrComp instanceof func) {
+            inst = olddomOrComp
+            inst.componentWillReceiveProps && inst.componentWillReceiveProps(vnode.props) // <-- 在 inst.props = vnode.props 之前调用
+            
+            inst.props = vnode.props
+        } else {
+            ...
+        }
+    }
+```
+
+当 组件的 props或者state发生改变的时候，组件一定会渲染吗？shouldComponentUpdate说了算！！ 如果组件没有shouldComponentUpdate这个方法， 默认是渲染的。 
+否则是基于 shouldComponentUpdate的返回值。 这个方法接受两个参数 newProps, newState 。 
+另外由于 props和 state(setState) 改变都会引起 shouldComponentUpdate调用， 所以: 
+```jsx harmony
+function render(vnode, parent, comp, olddomOrComp) {
+    ...
+    else if (typeof vnode.nodeName === "function") {
+            let func = vnode.nodeName
+            let inst
+            if(olddomOrComp && olddomOrComp instanceof func) {
+                inst = olddomOrComp
+                inst.componentWillReceiveProps && inst.componentWillReceiveProps(vnode.props) // <-- 在 inst.props = vnode.props 之前调用
+                
+                let shoudUpdate
+                if(inst.shouldComponentUpdate) {
+                    shoudUpdate = inst.shouldComponentUpdate(vnode.props, olddomOrComp.state) // <-- 在 inst.props = vnode.props 之前调用
+                } else {
+                    shoudUpdate = true
+                }
+    
+                inst.props = vnode.props   
+                if (!shoudUpdate) {   // <-- 在 inst.props = vnode.props  之后
+                    return // do nothing just return
+                }
+                
+
+            } else {
+                ...
+            }
+        }
+     ...
+}
+
+
+setState(state) {
+    setTimeout(() => {
+        let shoudUpdate
+        if(this.shouldComponentUpdate) {
+            shoudUpdate = this.shouldComponentUpdate(this.props, state)
+        } else {
+            shoudUpdate = true
+        }
+        this.state = state
+        if (!shoudUpdate) {  // <-- 在  this.state = state  之后
+            return // do nothing just return
+        }
+
+        const vnode = this.render()
+        let olddom = getDOM(this)
+        render(vnode, olddom.parentNode, this, this.__rendered)
+        this.componentDidUpdate && this.componentDidUpdate() // <-- 需要调用下： componentDidUpdate
+    }, 0)
+}
+```
+当 shoudUpdate 为false的时候呢， 直接return 就ok了， 但是shoudUpdate 为false 只是表明 不渲染， 但是在 return之前， newProps和newState一定要设置到组件实例上。
+<br/>**注** setState render之后 也是需要调用： componentDidUpdate
+
+当 shoudUpdate == true 的时候。 会调用： componentWillUpdate， 参数为newProps和newState。 这个函数调用之后，就会把nextProps和nextState分别设置到this.props和this.state中。
+```jsx harmony
+function render(vnode, parent, comp, olddomOrComp) {
+    ...
+    else if (typeof vnode.nodeName === "function") {
+    ...
+    let shoudUpdate
+    if(inst.shouldComponentUpdate) {
+        shoudUpdate = inst.shouldComponentUpdate(vnode.props, olddomOrComp.state) // <-- 在 inst.props = vnode.props 之前调用
+    } else {
+        shoudUpdate = true
+    }
+    shoudUpdate && inst.componentWillUpdate && inst.componentWillUpdate(vnode.props, olddomOrComp.state)   // <-- 在 inst.props = vnode.props 之前调用   
+    inst.props = vnode.props   
+    if (!shoudUpdate) {   // <-- 在 inst.props = vnode.props  之后
+        return // do nothing just return
+    }
+                
+    ...
+}
+
+
+setState(state) {
+    setTimeout(() => {
+        ...
+        shoudUpdate && this.componentWillUpdate && this.componentWillUpdate(this.props, state) // <-- 在 this.state = state 之前调用
+        this.state = state
+        if (!shoudUpdate) {  // <-- 在  this.state = state  之后
+            return // do nothing just return
+        }
+        ...
+}
+```
+
+#### componentWillUnmount
+当组件要被销毁的时候， 调用组件的componentWillUnmount。 inst没有被复用的时候， 要销毁。 dom没有被复用的时候， 也要销毁， 而且是树形结构
+的递归操作。 有点像 render的递归， 直接看代码： 
+```jsx harmony
+function recoveryDomOrComp(domOrComp) {
+    if (domOrComp instanceof Component) { // inst
+        domOrComp.componentWillUnmount && domOrComp.componentWillUnmount()
+        recoveryDomOrComp(domOrComp.__rendered)
+    } else if (domOrComp.__rendered instanceof RenderedHelper) { // dom like div/span...
+        domOrComp.parentNode.removeChild(domOrComp) //remove first
+
+        const childrens = domOrComp.__rendered.getInnerArr()
+        childrens.forEach(element => {
+            recoveryDomOrComp(element)
+        })
+
+    } else { // textNode 节点
+        domOrComp.parentNode.removeChild(domOrComp)
+    }
+}
+```
+recoveryDomOrComp 是这样的一个 递归函数： 
+   * 当domOrComp 为组件实例的时候， 首先调用：componentWillUnmount， 然后 recoveryDomOrComp(inst.__rendered)
+   * 当domOrComp 为DOM节点 （非文本 TextNode）, remove自己。 然后遍历 recoveryDomOrComp(子节点) 
+   * 当domOrComp 为TextNode，remove自己 
+与render一样， 由于组件 最终一定会render html的标签。 所以这个递归一定是能够正常返回的。
+<br/> 哪些地方需要调用recoveryDomOrComp ？ 
+1. 所有olddomOrComp 没有被复用的地方。 因为一旦olddomOrComp 不被复用， 一定有一个新的取得它， 它就要被销毁
+2. 多余的 子节点。 div 起初有3个子节点， setState之后变成了2个。 多出来的要被销毁
+```jsx harmony
+
+```
+
+   
+
+
+
+
 
         
 

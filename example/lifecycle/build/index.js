@@ -115,12 +115,24 @@ var Component = function () {
             var _this = this;
 
             setTimeout(function () {
+                var shoudUpdate = void 0;
+                if (_this.shouldComponentUpdate) {
+                    shoudUpdate = _this.shouldComponentUpdate(_this.props, state);
+                } else {
+                    shoudUpdate = true;
+                }
+
+                shoudUpdate && _this.componentWillUpdate && _this.componentWillUpdate(_this.props, state);
                 _this.state = state;
+
+                if (!shoudUpdate) {
+                    return; // do nothing just return
+                }
+
                 var vnode = _this.render();
                 var olddom = (0, _util.getDOM)(_this);
-                var startTime = new Date().getTime();
                 (0, _render2.default)(vnode, olddom.parentNode, _this, _this.__rendered);
-                console.log("duration:", new Date().getTime() - startTime);
+                _this.componentDidUpdate && _this.componentDidUpdate();
             }, 0);
         }
     }]);
@@ -184,6 +196,11 @@ var RenderedHelper = function () {
         key: "slice",
         value: function slice(start, end) {
             return this.__arr.slice(start, end);
+        }
+    }, {
+        key: "getInnerArr",
+        value: function getInnerArr() {
+            return this.__arr;
         }
     }]);
 
@@ -260,9 +277,24 @@ function render(vnode, parent, comp, olddomOrComp) {
         var inst = void 0;
         if (olddomOrComp && olddomOrComp instanceof func) {
             inst = olddomOrComp;
+            inst.componentWillReceiveProps && inst.componentWillReceiveProps(vnode.props);
+
+            var shoudUpdate = void 0;
+            if (inst.shouldComponentUpdate) {
+                shoudUpdate = inst.shouldComponentUpdate(vnode.props, olddomOrComp.state);
+            } else {
+                shoudUpdate = true;
+            }
+
+            shoudUpdate && inst.componentWillUpdate && inst.componentWillUpdate(vnode.props, olddomOrComp.state);
             inst.props = vnode.props;
+
+            if (!shoudUpdate) {
+                return; // do nothing just return
+            }
         } else {
             inst = new func(vnode.props);
+            inst.componentWillMount && inst.componentWillMount();
 
             if (olddomOrComp) {
                 parent.removeChild((0, _util.getDOM)(olddomOrComp));
@@ -277,6 +309,12 @@ function render(vnode, parent, comp, olddomOrComp) {
 
         var innerVnode = inst.render();
         render(innerVnode, parent, inst, inst.__rendered);
+
+        if (olddomOrComp && olddomOrComp instanceof func) {
+            inst.componentDidUpdate && inst.componentDidUpdate();
+        } else {
+            inst.componentDidMount && inst.componentDidMount();
+        }
     }
 }
 
@@ -1011,20 +1049,6 @@ var ComplexComp = function (_Component5) {
 
     return ComplexComp;
 }(_Component7.default);
-
-/**
- A
- C
- C
- A
-
-
- A
- B
- B
- C
- */
-
 
 exports.default = ComplexComp;
 
