@@ -26,6 +26,7 @@ class C extends Component {
 ![Fater_Tree](__rendered3.png)
 
 是绝对不可能 出现下图这种树结构 (与render函数返回单根的特性矛盾)
+
 ![Error_Tree](__rendered4.png)
 
 这保证了__rendered引用 一定指向一个inst／dom。 可以通过__rendered来复用实例。 
