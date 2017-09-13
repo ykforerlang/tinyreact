@@ -3,6 +3,7 @@ import Component from '../../lib/Component'
 import createElement from '../../lib/createElement'
 import RenderedHelper from '../../lib/RenderedHelper'
 import ComplexComp from './ComplexComp'
+import ComplexComp2 from './ComplexComp2'
 
 class TestApp extends Component {
     constructor(props) {

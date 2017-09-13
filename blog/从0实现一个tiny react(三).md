@@ -1,5 +1,5 @@
 # 从0实现一个tiny react（三）生命周期
-在给tinyreact加生命周期之前，先考虑一个 组件实例复用
+在给tinyreact加生命周期之前，先考虑一个 组件实例的复用
 
 
 ### 复用组件实例
@@ -50,50 +50,96 @@ else if (typeof vnode.nodeName == "function") {
 对于1， 2 每次setState的时候都会新建inst， 在这里是可以复用之前创建好的inst实例的。 
 
 但是如果一个组件 初始渲染为 '\<A/\>', setState 之后渲染为 '\<B/\>' 这种情况呢？ 那inst就不能复用了， 类比一下 DOM 里的 div --> span
-
-so, render代码如下： 
-```javascript 1.7
+把render 第四个参数 old ---> olddomOrComp ， 通过这个参数来判断 dom 或者inst 是否可以复用：
+```jsx harmony
+//inst 是否可以复用
 function render (vnode, parent, comp, olddomOrComp) {
     ...
+    } else if(typeof vnode.nodeName === "string") {
+        if(!olddomOrComp || olddomOrComp.nodeName !== vnode.nodeName.toUpperCase()) { // <--- dom 可以复用
+             createNewDom(vnode, parent, comp, olddomOrComp, myIndex)
+         }
+    ...     
     } else if (typeof vnode.nodeName == "function") {
         let func = vnode.nodeName
         let inst
-        if(olddomOrComp && olddomOrComp instanceof func) {
+        if(olddomOrComp && olddomOrComp instanceof func) { // <--- inst 可以复用 
             inst = olddomOrComp
             olddomOrComp.props = vnode.props 
-        } else {
-            inst = new func(vnode.props)
-            comp && (comp.__rendered = inst)
         }
-
-        let innerVnode = inst.render()
+        ....
+        
         render(innerVnode, parent, inst, inst.__rendered)
-    }
-    ...
-}
 ```
-注意 这里render的第4个参数被重新定义为  olddomOrComp 含义: 之前的老dom 或者老组件实例 。 对应的 最后的 render(innerVnode, parent, inst, inst.__rendered),
-对应的， Component里面setState 和 createNewDom方法的修改： 
+这里 在最后的 render(innerVnode, parent, inst, olddom) 被改为了： render(innerVnode, parent, inst, inst.__rendered)。 这样是符合 olddomOrComp定义的。
+但是 olddom 其实是有2个作用的
+1. 判断dom是否可以复用
+2. parent.replaceChild(dom, olddom), olddom确定了新的dom的位置
+而 olddomOrComp 是做不到第二点。 即使： parent.replaceChild(dom, getDOM(olddomOrComp)) 也是不行的。 原因是：
+假如初始 CompA --> <Sub1/>  setState后  CompA --> <Sub2/>， 那么inst 不可以复用， inst.__rendered 是undefined， 就从replaceChild变成了appendChild
+
+怎么解决呢？ 引入第5个参数 myIndex: dom的位置问题都交给这个变量。 olddomOrComp只负责决定 复用的问题
+
+so, 加入myIndex的代码如下： 
 ```javascript 1.7
-setState(state) {
-    setTimeout(() => {
-        ...
-        render(vnode, olddom.parentNode, this, this.__rendered)  //传递this.__rendered 作为第四个参数
-       
-    }, 0)
+/**
+ * 替换新的Dom， 如果没有在最后插入
+ * @param parent
+ * @param newDom
+ * @param myIndex
+ */
+function setNewDom(parent, newDom, myIndex) {
+    const old =  parent.childNodes[myIndex]
+    if (old) {
+        parent.replaceChild(newDom, old)
+    } else {
+        parent.appendChild(newDom)
+    }
 }
 
+function render(vnode, parent, comp, olddomOrComp, myIndex) {
+    let dom
+    if(typeof vnode === "string" || typeof vnode === "number" ) {
+        ...
+        } else {
+           
+            dom = document.createTextNode(vnode)
+            setNewDom(parent, dom, myIndex)              // <--- 根据myIndex设置 dom
+        }
+    } else if(typeof vnode.nodeName === "string") {
+        if(!olddomOrComp || olddomOrComp.nodeName !== vnode.nodeName.toUpperCase()) {
+            createNewDom(vnode, parent, comp, olddomOrComp, myIndex)
+        } else {
+            diffDOM(vnode, parent, comp, olddomOrComp, myIndex)
+        }
+    } else if (typeof vnode.nodeName === "function") {
+        ...
+        let innerVnode = inst.render()
+        render(innerVnode, parent, inst, inst.__rendered, myIndex) // <--- 传递 myIndex
+    }
+}
 
-function createNewDom(vnode, parent, comp, olddomOrComp) {
+function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
     ...
-    if(olddomOrComp) {
-        parent.replaceChild(dom, getDOM(olddomOrComp)) // 这里可以替换的DOM元素， 需要找到olddomOrComp 对应的DOM元素
-    } else {
-        parent.appendChild(dom)
+    setAttrs(dom, vnode.props)
+
+    setNewDom(parent, dom, myIndex)         // <--- 根据myIndex设置 dom
+
+    for(let i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], dom, null, null, i)  // <--- i 就是myIndex
+    }
+}
+
+function diffDOM(vnode, parent, comp, olddom) {
+    ...
+    for(let i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], olddom, null, renderedArr[i], i)  // <--- i 就是myIndex
     }
     ...
 }
+
 ```
+
 重新考虑 Father里面调用 setState。 此时已经不会创建新实例了。
 
 那么 假如现在对 Grandson调用setState呢？ 很不幸， 我们需要创建Granssonson1, Granssonson2, Granssonson3， 调用几次， 我们就得跟着新建几次。 
@@ -115,18 +161,14 @@ parent.__rendered 数组中。 那怎么判断 创建出来的是 "直接子节�
 
 当setState重新渲染的时候， 如果老的dom／inst没有被复用， 则应该用新的dom／inst 替换
 <br/> 
-1. 创建dom的时候。 olddomOrComp 存在的时候 替换
+1. 创建dom的时候。
 ```javascript 1.7
-function createNewDom(vnode, parent, comp, olddomOrComp) {
+function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
     ...
     if (comp) {
         comp.__rendered = dom
     } else {
-        if (olddomOrComp) {
-            parent.__rendered.replace(inst, olddomOrComp)
-        } else {
-            parent.__rendered.push(dom)
-        }
+        parent.__rendered[myIndex] = dom
     }
     ...
 }
@@ -135,19 +177,19 @@ function createNewDom(vnode, parent, comp, olddomOrComp) {
 ```javascript 1.7
 function diffDOM(vnode, parent, comp, olddom) {
     ...
-    olddom.__rendered.slice(vnode.children.length)
+    olddom.__rendered.slice(vnode.children.length)  // <--- 移除多余 子节点
         .forEach(element => {
             olddom.removeChild(getDOM(element))
         })
 
     olddom.__rendered = olddom.__rendered.slice(0, vnode.children.length)
     for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, olddom.__rendered[i])
+        render(vnode.children[i], olddom, null, olddom.__rendered[i], i)
     }
     olddom.__vnode = vnode
 }
 ```
-3. 组件实例类似 createNewDom
+3. 组件实例
 ```javascript 1.7
 else if (typeof vnode.nodeName == "function") {
     ...
@@ -159,43 +201,13 @@ else if (typeof vnode.nodeName == "function") {
         if (comp) {
             comp.__rendered = inst
         } else {
-            if (olddomOrComp) {
-                parent.__rendered.replace(inst, olddomOrComp)
-            } else {
-                parent.__rendered.push(inst)
-            }
+            parent.__rendered[myIndex] = inst
         }
     }
     ...
 }
 ```
-由于js的Array不提供replace（可以使用indexOf + splice实现， 但是每次查找都是O(n)）， 所以我们提供 RenderedHelper 类来提供（O(1)的时间复杂度来实现replace）：
-```jsx harmony
-class RenderedHelper {
-    constructor(arr) {
-        this.__arr = arr || []
-    }
 
-    replaceNullPush(now, old) {
-        if (!old) {
-            now.__renderedHelperTag = `${this.__arr.length}`
-            this.__arr.push(now)
-        } else {
-            if (this.__arr[old.__renderedHelperTag] === old) {
-                now.__renderedHelperTag = old.__renderedHelperTag
-                this.__arr[now.__renderedHelperTag] = now
-            } else {
-                now.__renderedHelperTag = `${this.__arr.length}`
-                this.__arr.push(now)
-            }
-        }
-    }
-
-    slice(start, end) {
-        return this.__arr.slice(start, end)
-    }
-}
-```
 所以完整的代码：
 ```jsx harmony
 function render(vnode, parent, comp, olddomOrComp) {
@@ -288,7 +300,7 @@ function diffDOM(vnode, parent, comp, olddom) {
 }
 ```
 ![Father_Tree](__rendered3_2.png)
-现在 __rendered链 完善了， Father／ Gransson 的setState, 都会先去尝试复用 组件实例。 
+现在 __rendered链 完善了， setState触发的渲染, 都会先去尝试复用 组件实例。[在线演示]() 
 
 ### 生命周期
 前面讨论的__rendered 和生命周期有 什么关系呢？ 生命周期是组件实例的生命周期， 之前的工作起码保证了一点: constructor 只会被调用一次了吧。。。

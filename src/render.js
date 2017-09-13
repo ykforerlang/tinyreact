@@ -2,7 +2,22 @@
  * Created by apple on 2017/8/21.
  */
 import { diffObject, getDOM } from './util'
-import RenderedHelper from './RenderedHelper'
+import Component from './Component'
+
+/**
+ * 替换新的Dom， 如果没有在最后插入
+ * @param parent
+ * @param newDom
+ * @param myIndex
+ */
+function setNewDom(parent, newDom, myIndex) {
+    const old =  parent.childNodes[myIndex]
+    if (old) {
+        parent.replaceChild(newDom, old)
+    } else {
+        parent.appendChild(newDom)
+    }
+}
 
 /**
  * 渲染vnode成实际的dom
@@ -10,8 +25,9 @@ import RenderedHelper from './RenderedHelper'
  * @param parent 实际渲染出来的dom，挂载的父元素
  * @param comp   谁渲染了我
  * @param olddomOrComp  老的dom/组件实例
+ * @param myIndex 在dom节点的位置
  */
-export default function render(vnode, parent, comp, olddomOrComp) {
+export default function render(vnode, parent, comp, olddomOrComp, myIndex) {
     let dom
     if(typeof vnode === "string" || typeof vnode === "number" ) {
         if(olddomOrComp && olddomOrComp.splitText) {
@@ -19,20 +35,20 @@ export default function render(vnode, parent, comp, olddomOrComp) {
                 olddomOrComp.nodeValue = vnode
             }
         } else {
-            dom = document.createTextNode(vnode)
-            parent.__rendered.replaceNullPush(dom, olddomOrComp) //comp 一定是null
-
             if(olddomOrComp) {
-                parent.replaceChild(dom, getDOM(olddomOrComp))
-            } else {
-                parent.appendChild(dom)
+                recoveryComp(olddomOrComp)
             }
+
+            dom = document.createTextNode(vnode)
+            parent.__rendered[myIndex] = dom  //comp 一定是null
+
+            setNewDom(parent, dom, myIndex)
         }
     } else if(typeof vnode.nodeName === "string") {
         if(!olddomOrComp || olddomOrComp.nodeName !== vnode.nodeName.toUpperCase()) {
-            createNewDom(vnode, parent, comp, olddomOrComp)
+            createNewDom(vnode, parent, comp, olddomOrComp, myIndex)
         } else {
-            diffDOM(vnode, parent, comp, olddomOrComp)
+            diffDOM(vnode, parent, comp, olddomOrComp, myIndex)
         }
     } else if (typeof vnode.nodeName === "function") {
         let func = vnode.nodeName
@@ -56,22 +72,23 @@ export default function render(vnode, parent, comp, olddomOrComp) {
                 return // do nothing just return
             }
         } else {
+            if (olddomOrComp) {
+                recoveryComp(olddomOrComp)
+            }
+
             inst = new func(vnode.props)
             inst.componentWillMount && inst.componentWillMount()
 
-            if (olddomOrComp) {
-                parent.removeChild(getDOM(olddomOrComp))
-            }
 
             if (comp) {
                 comp.__rendered = inst
             } else {
-                parent.__rendered.replaceNullPush(inst, olddomOrComp)
+                parent.__rendered[myIndex] = inst
             }
         }
 
         let innerVnode = inst.render()
-        render(innerVnode, parent, inst, inst.__rendered)
+        render(innerVnode, parent, inst, inst.__rendered, myIndex)
 
         if(olddomOrComp && olddomOrComp instanceof func) {
             inst.componentDidUpdate && inst.componentDidUpdate()
@@ -192,28 +209,28 @@ function diffAttrs(dom, newProps, oldProps) {
     }
 }
 
-function createNewDom(vnode, parent, comp, olddomOrComp) {
+function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
+    if(olddomOrComp) {
+        recoveryComp(olddomOrComp)
+    }
+
     let dom = document.createElement(vnode.nodeName)
 
-    dom.__rendered = new RenderedHelper()
+    dom.__rendered = []
     dom.__vnode = vnode
 
     if (comp) {
         comp.__rendered = dom
     } else {
-        parent.__rendered.replaceNullPush(dom, olddomOrComp)
+        parent.__rendered[myIndex] = dom
     }
 
     setAttrs(dom, vnode.props)
 
-    if(olddomOrComp) {
-        parent.replaceChild(dom, getDOM(olddomOrComp))
-    } else {
-        parent.appendChild(dom)
-    }
+    setNewDom(parent, dom, myIndex)
 
     for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], dom, null, null)
+        render(vnode.children[i], dom, null, null, i)
     }
 }
 
@@ -224,16 +241,30 @@ function diffDOM(vnode, parent, comp, olddom) {
     diffAttrs(olddom, bothIn.left, bothIn.right)
 
 
-    olddom.__rendered.slice(vnode.children.length)
-        .forEach(element => {
-            olddom.removeChild(getDOM(element))
-        })
-
-    const __renderedArr = olddom.__rendered.slice(0, vnode.children.length)
-    olddom.__rendered = new RenderedHelper(__renderedArr)
+    const willRemoveArr = olddom.__rendered.slice(vnode.children.length)
+    const renderedArr = olddom.__rendered.slice(0, vnode.children.length)
+    olddom.__rendered = renderedArr
     for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, __renderedArr[i])
+        render(vnode.children[i], olddom, null, renderedArr[i], i)
     }
+
+    willRemoveArr.forEach(element => {
+        recoveryComp(element)
+        olddom.removeChild(getDOM(element))
+    })
+
     olddom.__vnode = vnode
 }
 
+function recoveryComp(comp) {
+    if (comp instanceof Component) {
+        comp.componentWillUnmount && comp.componentWillUnmount()
+        recoveryComp(comp.__rendered)
+    } else if (comp.__rendered instanceof Array) {
+        comp.__rendered.forEach(element => {
+            recoveryComp(element)
+        })
+    } else {
+        // do nothing
+    }
+}

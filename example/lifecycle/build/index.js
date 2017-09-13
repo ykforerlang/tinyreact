@@ -86,11 +86,11 @@ var _createClass = function () {
       * Created by apple on 2017/7/20.
       */
 
-var _render = __webpack_require__(2);
+var _render = __webpack_require__(3);
 
 var _render2 = _interopRequireDefault(_render);
 
-var _util = __webpack_require__(3);
+var _util = __webpack_require__(4);
 
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : { default: obj };
@@ -144,6 +144,50 @@ exports.default = Component;
 
 /***/ }),
 /* 1 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.default = createElement;
+/**
+ * Created by apple on 2017/7/16.
+ */
+
+/**
+ *
+ * @param comp func or div/p/span/..
+ * @param props {}
+ * @param children
+ */
+function createElement(comp, props) {
+    var children = [];
+
+    for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+        args[_key - 2] = arguments[_key];
+    }
+
+    for (var i = 0; i < args.length; i++) {
+        if (typeof args[i] === 'boolean' || args[i] === undefined || args === null) continue;
+        if (args[i] instanceof Array) {
+            children = children.concat(args[i]);
+        } else {
+            children.push(args[i]);
+        }
+    }
+
+    return {
+        nodeName: comp,
+        props: props || {},
+        children: children
+    };
+}
+
+/***/ }),
+/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -210,7 +254,7 @@ var RenderedHelper = function () {
 exports.default = RenderedHelper;
 
 /***/ }),
-/* 2 */
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -232,14 +276,29 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
 
 exports.default = render;
 
-var _util = __webpack_require__(3);
+var _util = __webpack_require__(4);
 
-var _RenderedHelper = __webpack_require__(1);
+var _Component = __webpack_require__(0);
 
-var _RenderedHelper2 = _interopRequireDefault(_RenderedHelper);
+var _Component2 = _interopRequireDefault(_Component);
 
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : { default: obj };
+}
+
+/**
+ * 替换新的Dom， 如果没有在最后插入
+ * @param parent
+ * @param newDom
+ * @param myIndex
+ */
+function setNewDom(parent, newDom, myIndex) {
+    var old = parent.childNodes[myIndex];
+    if (old) {
+        parent.replaceChild(newDom, old);
+    } else {
+        parent.appendChild(newDom);
+    }
 }
 
 /**
@@ -248,8 +307,9 @@ function _interopRequireDefault(obj) {
  * @param parent 实际渲染出来的dom，挂载的父元素
  * @param comp   谁渲染了我
  * @param olddomOrComp  老的dom/组件实例
+ * @param myIndex 在dom节点的位置
  */
-function render(vnode, parent, comp, olddomOrComp) {
+function render(vnode, parent, comp, olddomOrComp, myIndex) {
     var dom = void 0;
     if (typeof vnode === "string" || typeof vnode === "number") {
         if (olddomOrComp && olddomOrComp.splitText) {
@@ -257,20 +317,20 @@ function render(vnode, parent, comp, olddomOrComp) {
                 olddomOrComp.nodeValue = vnode;
             }
         } else {
-            dom = document.createTextNode(vnode);
-            parent.__rendered.replaceNullPush(dom, olddomOrComp); //comp 一定是null
-
             if (olddomOrComp) {
-                parent.replaceChild(dom, (0, _util.getDOM)(olddomOrComp));
-            } else {
-                parent.appendChild(dom);
+                recoveryComp(olddomOrComp);
             }
+
+            dom = document.createTextNode(vnode);
+            parent.__rendered[myIndex] = dom; //comp 一定是null
+
+            setNewDom(parent, dom, myIndex);
         }
     } else if (typeof vnode.nodeName === "string") {
         if (!olddomOrComp || olddomOrComp.nodeName !== vnode.nodeName.toUpperCase()) {
-            createNewDom(vnode, parent, comp, olddomOrComp);
+            createNewDom(vnode, parent, comp, olddomOrComp, myIndex);
         } else {
-            diffDOM(vnode, parent, comp, olddomOrComp);
+            diffDOM(vnode, parent, comp, olddomOrComp, myIndex);
         }
     } else if (typeof vnode.nodeName === "function") {
         var func = vnode.nodeName;
@@ -293,22 +353,22 @@ function render(vnode, parent, comp, olddomOrComp) {
                 return; // do nothing just return
             }
         } else {
+            if (olddomOrComp) {
+                recoveryComp(olddomOrComp);
+            }
+
             inst = new func(vnode.props);
             inst.componentWillMount && inst.componentWillMount();
-
-            if (olddomOrComp) {
-                parent.removeChild((0, _util.getDOM)(olddomOrComp));
-            }
 
             if (comp) {
                 comp.__rendered = inst;
             } else {
-                parent.__rendered.replaceNullPush(inst, olddomOrComp);
+                parent.__rendered[myIndex] = inst;
             }
         }
 
         var innerVnode = inst.render();
-        render(innerVnode, parent, inst, inst.__rendered);
+        render(innerVnode, parent, inst, inst.__rendered, myIndex);
 
         if (olddomOrComp && olddomOrComp instanceof func) {
             inst.componentDidUpdate && inst.componentDidUpdate();
@@ -428,28 +488,28 @@ function diffAttrs(dom, newProps, oldProps) {
     }
 }
 
-function createNewDom(vnode, parent, comp, olddomOrComp) {
+function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
+    if (olddomOrComp) {
+        recoveryComp(olddomOrComp);
+    }
+
     var dom = document.createElement(vnode.nodeName);
 
-    dom.__rendered = new _RenderedHelper2.default();
+    dom.__rendered = [];
     dom.__vnode = vnode;
 
     if (comp) {
         comp.__rendered = dom;
     } else {
-        parent.__rendered.replaceNullPush(dom, olddomOrComp);
+        parent.__rendered[myIndex] = dom;
     }
 
     setAttrs(dom, vnode.props);
 
-    if (olddomOrComp) {
-        parent.replaceChild(dom, (0, _util.getDOM)(olddomOrComp));
-    } else {
-        parent.appendChild(dom);
-    }
+    setNewDom(parent, dom, myIndex);
 
     for (var i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], dom, null, null);
+        render(vnode.children[i], dom, null, null, i);
     }
 }
 
@@ -463,20 +523,36 @@ function diffDOM(vnode, parent, comp, olddom) {
     removeAttrs(olddom, onlyInRight);
     diffAttrs(olddom, bothIn.left, bothIn.right);
 
-    olddom.__rendered.slice(vnode.children.length).forEach(function (element) {
+    var willRemoveArr = olddom.__rendered.slice(vnode.children.length);
+    var renderedArr = olddom.__rendered.slice(0, vnode.children.length);
+    olddom.__rendered = renderedArr;
+    for (var i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], olddom, null, renderedArr[i], i);
+    }
+
+    willRemoveArr.forEach(function (element) {
+        recoveryComp(element);
         olddom.removeChild((0, _util.getDOM)(element));
     });
 
-    var __renderedArr = olddom.__rendered.slice(0, vnode.children.length);
-    olddom.__rendered = new _RenderedHelper2.default(__renderedArr);
-    for (var i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, __renderedArr[i]);
-    }
     olddom.__vnode = vnode;
 }
 
+function recoveryComp(comp) {
+    if (comp instanceof _Component2.default) {
+        comp.componentWillUnmount && comp.componentWillUnmount();
+        recoveryComp(comp.__rendered);
+    } else if (comp.__rendered instanceof Array) {
+        comp.__rendered.forEach(function (element) {
+            recoveryComp(element);
+        });
+    } else {
+        // do nothing
+    }
+}
+
 /***/ }),
-/* 3 */
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -538,50 +614,6 @@ function getDOM(comp) {
 }
 
 /***/ }),
-/* 4 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.default = createElement;
-/**
- * Created by apple on 2017/7/16.
- */
-
-/**
- *
- * @param comp func or div/p/span/..
- * @param props {}
- * @param children
- */
-function createElement(comp, props) {
-    var children = [];
-
-    for (var _len = arguments.length, args = Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
-        args[_key - 2] = arguments[_key];
-    }
-
-    for (var i = 0; i < args.length; i++) {
-        if (typeof args[i] === 'boolean' || args[i] === undefined || args === null) continue;
-        if (args[i] instanceof Array) {
-            children = children.concat(args[i]);
-        } else {
-            children.push(args[i]);
-        }
-    }
-
-    return {
-        nodeName: comp,
-        props: props || {},
-        children: children
-    };
-}
-
-/***/ }),
 /* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -590,7 +622,7 @@ function createElement(comp, props) {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _render = __webpack_require__(2);
+var _render = __webpack_require__(3);
 
 var _render2 = _interopRequireDefault(_render);
 
@@ -598,17 +630,21 @@ var _Component3 = __webpack_require__(0);
 
 var _Component4 = _interopRequireDefault(_Component3);
 
-var _createElement = __webpack_require__(4);
+var _createElement = __webpack_require__(1);
 
 var _createElement2 = _interopRequireDefault(_createElement);
 
-var _RenderedHelper = __webpack_require__(1);
+var _RenderedHelper = __webpack_require__(2);
 
 var _RenderedHelper2 = _interopRequireDefault(_RenderedHelper);
 
 var _ComplexComp = __webpack_require__(6);
 
 var _ComplexComp2 = _interopRequireDefault(_ComplexComp);
+
+var _ComplexComp3 = __webpack_require__(7);
+
+var _ComplexComp4 = _interopRequireDefault(_ComplexComp3);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -731,11 +767,11 @@ var _Component6 = __webpack_require__(0);
 
 var _Component7 = _interopRequireDefault(_Component6);
 
-var _createElement = __webpack_require__(4);
+var _createElement = __webpack_require__(1);
 
 var _createElement2 = _interopRequireDefault(_createElement);
 
-var _RenderedHelper = __webpack_require__(1);
+var _RenderedHelper = __webpack_require__(2);
 
 var _RenderedHelper2 = _interopRequireDefault(_RenderedHelper);
 
@@ -1043,6 +1079,341 @@ var ComplexComp = function (_Component5) {
                 (0, _createElement2.default)(TestAppC, null),
                 !this.state.odd && (0, _createElement2.default)(TestAppA, null),
                 (0, _createElement2.default)(TestAppD, { text: this.state.odd ? "testB" : "testC" })
+            );
+        }
+    }]);
+
+    return ComplexComp;
+}(_Component7.default);
+
+exports.default = ComplexComp;
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Component6 = __webpack_require__(0);
+
+var _Component7 = _interopRequireDefault(_Component6);
+
+var _createElement = __webpack_require__(1);
+
+var _createElement2 = _interopRequireDefault(_createElement);
+
+var _RenderedHelper = __webpack_require__(2);
+
+var _RenderedHelper2 = _interopRequireDefault(_RenderedHelper);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var TestAppA = function (_Component) {
+    _inherits(TestAppA, _Component);
+
+    function TestAppA(props) {
+        _classCallCheck(this, TestAppA);
+
+        var _this = _possibleConstructorReturn(this, (TestAppA.__proto__ || Object.getPrototypeOf(TestAppA)).call(this, props));
+
+        console.log("TestAppA constructor");
+        return _this;
+    }
+
+    _createClass(TestAppA, [{
+        key: 'componentWillMount',
+        value: function componentWillMount() {
+            console.log("TestAppA componentWillMount");
+        }
+    }, {
+        key: 'componentDidMount',
+        value: function componentDidMount() {
+            console.log("TestAppA componentDidMount");
+        }
+    }, {
+        key: 'componentWillReceiveProps',
+        value: function componentWillReceiveProps(nextProps) {
+            console.log("TestAppA componentWillReceiveProps");
+        }
+    }, {
+        key: 'shouldComponentUpdate',
+        value: function shouldComponentUpdate(nextProps, nextState) {
+            console.log("TestAppA shouldComponentUpdate", nextProps, nextState);
+            return true;
+        }
+    }, {
+        key: 'componentWillUpdate',
+        value: function componentWillUpdate() {
+            console.log("TestAppA componentWillUpdate");
+        }
+    }, {
+        key: 'componentDidUpdate',
+        value: function componentDidUpdate() {
+            console.log("TestAppA componentDidUpdate");
+        }
+    }, {
+        key: 'componentWillUnmount',
+        value: function componentWillUnmount() {
+            console.log("TestAppA componentWillUnmount");
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            console.log("TestAppA render...");
+            return (0, _createElement2.default)(
+                'div',
+                null,
+                'TestAppA'
+            );
+        }
+    }]);
+
+    return TestAppA;
+}(_Component7.default);
+
+var TestAppB = function (_Component2) {
+    _inherits(TestAppB, _Component2);
+
+    function TestAppB(props) {
+        _classCallCheck(this, TestAppB);
+
+        var _this2 = _possibleConstructorReturn(this, (TestAppB.__proto__ || Object.getPrototypeOf(TestAppB)).call(this, props));
+
+        console.log("TestAppB constructor");
+        return _this2;
+    }
+
+    _createClass(TestAppB, [{
+        key: 'componentWillMount',
+        value: function componentWillMount() {
+            console.log("TestAppB componentWillMount");
+        }
+    }, {
+        key: 'componentDidMount',
+        value: function componentDidMount() {
+            console.log("TestAppB componentDidMount");
+        }
+    }, {
+        key: 'componentWillReceiveProps',
+        value: function componentWillReceiveProps(nextProps) {
+            console.log("TestAppB componentWillReceiveProps");
+        }
+    }, {
+        key: 'shouldComponentUpdate',
+        value: function shouldComponentUpdate(nextProps, nextState) {
+            console.log("TestAppB shouldComponentUpdate", nextProps, nextState);
+            return true;
+        }
+    }, {
+        key: 'componentWillUpdate',
+        value: function componentWillUpdate() {
+            console.log("TestAppB componentWillUpdate");
+        }
+    }, {
+        key: 'componentDidUpdate',
+        value: function componentDidUpdate() {
+            console.log("TestAppB componentDidUpdate");
+        }
+    }, {
+        key: 'componentWillUnmount',
+        value: function componentWillUnmount() {
+            console.log("TestAppB componentWillUnmount");
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            console.log("TestAppB render...");
+            return (0, _createElement2.default)(
+                'div',
+                null,
+                'TestAppB'
+            );
+        }
+    }]);
+
+    return TestAppB;
+}(_Component7.default);
+
+var TestAppC = function (_Component3) {
+    _inherits(TestAppC, _Component3);
+
+    function TestAppC(props) {
+        _classCallCheck(this, TestAppC);
+
+        var _this3 = _possibleConstructorReturn(this, (TestAppC.__proto__ || Object.getPrototypeOf(TestAppC)).call(this, props));
+
+        console.log("TestAppC constructor");
+        return _this3;
+    }
+
+    _createClass(TestAppC, [{
+        key: 'componentWillMount',
+        value: function componentWillMount() {
+            console.log("TestAppC componentWillMount");
+        }
+    }, {
+        key: 'componentDidMount',
+        value: function componentDidMount() {
+            console.log("TestAppC componentDidMount");
+        }
+    }, {
+        key: 'componentWillReceiveProps',
+        value: function componentWillReceiveProps(nextProps) {
+            console.log("TestAppC componentWillReceiveProps");
+        }
+    }, {
+        key: 'shouldComponentUpdate',
+        value: function shouldComponentUpdate(nextProps, nextState) {
+            console.log("TestAppC shouldComponentUpdate", nextProps, nextState);
+            return true;
+        }
+    }, {
+        key: 'componentWillUpdate',
+        value: function componentWillUpdate() {
+            console.log("TestAppC componentWillUpdate");
+        }
+    }, {
+        key: 'componentDidUpdate',
+        value: function componentDidUpdate() {
+            console.log("TestAppC componentDidUpdate");
+        }
+    }, {
+        key: 'componentWillUnmount',
+        value: function componentWillUnmount() {
+            console.log("TestAppC componentWillUnmount");
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            console.log("TestAppC render...");
+            return (0, _createElement2.default)(
+                'div',
+                null,
+                'TestAppC'
+            );
+        }
+    }]);
+
+    return TestAppC;
+}(_Component7.default);
+
+var TestAppD = function (_Component4) {
+    _inherits(TestAppD, _Component4);
+
+    function TestAppD(props) {
+        _classCallCheck(this, TestAppD);
+
+        var _this4 = _possibleConstructorReturn(this, (TestAppD.__proto__ || Object.getPrototypeOf(TestAppD)).call(this, props));
+
+        console.log("TestAppD constructor");
+        return _this4;
+    }
+
+    _createClass(TestAppD, [{
+        key: 'componentWillMount',
+        value: function componentWillMount() {
+            console.log("TestAppD componentWillMount");
+        }
+    }, {
+        key: 'componentDidMount',
+        value: function componentDidMount() {
+            console.log("TestAppD componentDidMount");
+        }
+    }, {
+        key: 'componentWillReceiveProps',
+        value: function componentWillReceiveProps(nextProps) {
+            console.log("TestAppD componentWillReceiveProps");
+        }
+    }, {
+        key: 'shouldComponentUpdate',
+        value: function shouldComponentUpdate(nextProps, nextState) {
+            console.log("TestAppD shouldComponentUpdate", nextProps, nextState);
+            return true;
+        }
+    }, {
+        key: 'componentWillUpdate',
+        value: function componentWillUpdate() {
+            console.log("TestAppD componentWillUpdate");
+        }
+    }, {
+        key: 'componentDidUpdate',
+        value: function componentDidUpdate() {
+            console.log("TestAppD componentDidUpdate");
+        }
+    }, {
+        key: 'componentWillUnmount',
+        value: function componentWillUnmount() {
+            console.log("TestAppD componentWillUnmount");
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            console.log("TestAppD render");
+            if (this.props.text === "testA") {
+                return (0, _createElement2.default)(TestAppA, null);
+            } else if (this.props.text === "testB") {
+                return (0, _createElement2.default)(TestAppB, null);
+            } else {
+                return (0, _createElement2.default)(TestAppC, null);
+            }
+        }
+    }]);
+
+    return TestAppD;
+}(_Component7.default);
+
+/// app1
+
+var ComplexComp = function (_Component5) {
+    _inherits(ComplexComp, _Component5);
+
+    function ComplexComp(props) {
+        _classCallCheck(this, ComplexComp);
+
+        var _this5 = _possibleConstructorReturn(this, (ComplexComp.__proto__ || Object.getPrototypeOf(ComplexComp)).call(this, props));
+
+        _this5.state = {
+            odd: false
+        };
+        return _this5;
+    }
+
+    _createClass(ComplexComp, [{
+        key: 'render',
+        value: function render() {
+            var _this6 = this;
+
+            return (0, _createElement2.default)(
+                'div',
+                { onClick: function onClick(e) {
+                        return _this6.setState({
+                            odd: !_this6.state.odd
+                        });
+                    } },
+                this.state.odd ? (0, _createElement2.default)(TestAppA, null) : (0, _createElement2.default)(TestAppB, null),
+                (0, _createElement2.default)(
+                    'div',
+                    null,
+                    'hi2'
+                ),
+                (0, _createElement2.default)(
+                    'div',
+                    null,
+                    'hi3'
+                )
             );
         }
     }]);
