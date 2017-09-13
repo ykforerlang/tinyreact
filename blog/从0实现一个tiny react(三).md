@@ -24,10 +24,12 @@ class C extends Component {
 ```
 所以 最终的组件树一定是类似这种的 (首字母大写的代表组件， div／span／a...代表原生DOM类型)
 ![Fater_Tree](__rendered3.png)
+
 是绝对不可能 出现下图这种树结构 (与render函数返回单根的特性矛盾)
 ![Error_Tree](__rendered4.png)
 
-这保证了__rendered引用 一定指向一个inst／dom。 可以通过__rendered来复用实例。 下面我们讨论怎么根据__rendered 复用inst
+这保证了__rendered引用 一定指向一个inst／dom。 可以通过__rendered来复用实例。 
+<br/>下面我们讨论怎么根据__rendered 复用inst
 
 假如在 Father里面调用 setState？ 按照现在render 函数的做法:
 ```javascript 1.7
@@ -146,7 +148,7 @@ function diffDOM(vnode, parent, comp, olddom) {
 那么 假如现在对 Grandson调用setState呢？ 很不幸， 我们需要创建Granssonson1, Granssonson2, Granssonson3， 调用几次， 我们就得跟着新建几次。 
 上面的复用方式 并没有解决这个问题, 之前 __rendered 引用链 到 dom就结束了, 如下图。 
 ![__rendered链](__rendered3_1.png)
-把__rendered这条链 完善吧！！
+<br/>把__rendered这条链 完善吧！！
 
 首先 对__rendered 重新定义如下:
 1. 当X 是组件实例的时候， __rendered 为X渲染出的 组件实例 或者 dom元素
@@ -319,7 +321,7 @@ function getDOMIndex(dom) {
 }
 ```
 ![Father_Tree](__rendered3_2.png)
-现在 __rendered链 完善了， setState触发的渲染, 都会先去尝试复用 组件实例。 [在线演示](http://jsfiddle.net/yankang/k8ypszLd/)
+<br/>现在 __rendered链 完善了， setState触发的渲染, 都会先去尝试复用 组件实例。 [在线演示](http://jsfiddle.net/yankang/k8ypszLd/)
 
 ### 生命周期
 前面讨论的__rendered 和生命周期有 什么关系呢？ 生命周期是组件实例的生命周期， 之前的工作起码保证了一点: constructor 只会被调用一次了吧。。。
@@ -334,7 +336,7 @@ function getDOMIndex(dom) {
 7. componentWillUnmount
 他们 和 react同名函数 含义相同
 
-##### componentWillMount, componentDidMount, componentDidUpdate
+#### componentWillMount, componentDidMount, componentDidUpdate
 这三个生命周期 是如此之简单： componentWillMount紧接着 创建实例的时候调用； 渲染完成之后，如果
 组件是新建的componentDidMount ， 否则：componentDidUpdate
 ```jsx harmony
@@ -367,7 +369,7 @@ else if (typeof vnode.nodeName === "function") {
     }
 ```
 
-##### componentWillReceiveProps， shouldComponentUpdate， componentWillUpdate
+#### componentWillReceiveProps， shouldComponentUpdate， componentWillUpdate
 当组件 获取新的props的时候， 会调用componentWillReceiveProps， 参数为newProps， 并且在这个方法内部this.props 还是值向oldProps,
 由于  props的改变 由 只能由 父组件 触发。 所以只用在 render函数里面处理就ok。不过 要在 inst.props = vnode.props 之前调用componentWillReceiveProps:
 ```jsx harmony
