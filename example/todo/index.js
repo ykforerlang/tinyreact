@@ -32,9 +32,19 @@ class App extends Component {
         })
     }
 
-    changeStatus(index) {
-        const list = this.state.list
-        list[index].status = (list[index].status === 'undo' ? 'done' : 'undo')
+    changeStatus(element) {
+        let list = this.state.list
+        list = list.map(ele => {
+            if (ele === element) {
+                return {
+                    value: element.value,
+                    status: element.status === 'undo' ? 'done' : 'undo'
+                }
+            } else {
+                return ele
+            }
+        })
+
         this.setState({
             list: list
         })

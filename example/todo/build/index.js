@@ -636,9 +636,19 @@ var App = function (_Component) {
         }
     }, {
         key: 'changeStatus',
-        value: function changeStatus(index) {
+        value: function changeStatus(element) {
             var list = this.state.list;
-            list[index].status = list[index].status === 'undo' ? 'done' : 'undo';
+            list = list.map(function (ele) {
+                if (ele === element) {
+                    return {
+                        value: element.value,
+                        status: element.status === 'undo' ? 'done' : 'undo'
+                    };
+                } else {
+                    return ele;
+                }
+            });
+
             this.setState({
                 list: list
             });
@@ -663,7 +673,6 @@ var App = function (_Component) {
                     return element.status === _this2.state.filter;
                 });
             }
-            console.log("render:", list, this.state);
 
             return (0, _tinyreact.createElement)(
                 'div',
@@ -849,13 +858,13 @@ var TaskList = function (_Component) {
                 (0, _tinyreact.createElement)(
                     'ul',
                     null,
-                    this.props.list.map(function (element, index) {
+                    this.props.list.map(function (element) {
                         return (0, _tinyreact.createElement)(
                             'li',
                             {
                                 style: { textDecoration: element.status === 'done' ? 'line-through' : 'none' },
                                 onClick: function onClick(e) {
-                                    return _this2.props.changeStatus(index);
+                                    return _this2.props.changeStatus(element);
                                 }
                             },
                             element.value
