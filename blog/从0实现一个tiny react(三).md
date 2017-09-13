@@ -23,13 +23,13 @@ class C extends Component {
 }
 ```
 所以 最终的组件树一定是类似这种的 (首字母大写的代表组件， div／span／a...代表原生DOM类型)
-![Fater_Tree](__rendered3.png)
+![Fater_Tree](__rendered3_1.png)
 
 是绝对不可能 出现下图这种树结构 (与render函数返回单根的特性矛盾)
 
 ![Error_Tree](__rendered4.png)
 
-这保证了__rendered引用 一定指向一个inst／dom。 可以通过__rendered来复用实例。 
+注意 __rendered引用 指向了一个inst／dom。 所以可以通过__rendered来复用实例。 
 <br/>下面我们讨论怎么根据__rendered 复用inst
 
 假如在 Father里面调用 setState？ 按照现在render 函数的做法:
@@ -147,8 +147,7 @@ function diffDOM(vnode, parent, comp, olddom) {
 重新考虑 Father里面调用 setState。 此时已经不会创建新实例了。
 
 那么 假如现在对 Grandson调用setState呢？ 很不幸， 我们需要创建Granssonson1, Granssonson2, Granssonson3， 调用几次， 我们就得跟着新建几次。 
-上面的复用方式 并没有解决这个问题, 之前 __rendered 引用链 到 dom就结束了, 如下图。 
-![__rendered链](__rendered3_1.png)
+上面的复用方式 并没有解决这个问题, 之前 __rendered 引用链 到 dom就结束了。
 <br/>把__rendered这条链 完善吧！！
 
 首先 对__rendered 重新定义如下:
@@ -321,8 +320,10 @@ function getDOMIndex(dom) {
     }
 }
 ```
+
 ![Father_Tree](__rendered3_2.png)
-<br/>现在 __rendered链 完善了， setState触发的渲染, 都会先去尝试复用 组件实例。 [在线演示](http://jsfiddle.net/yankang/k8ypszLd/)
+
+现在 __rendered链 完善了， setState触发的渲染, 都会先去尝试复用 组件实例。 [在线演示](http://jsfiddle.net/yankang/k8ypszLd/)
 
 ### 生命周期
 前面讨论的__rendered 和生命周期有 什么关系呢？ 生命周期是组件实例的生命周期， 之前的工作起码保证了一点: constructor 只会被调用一次了吧。。。
