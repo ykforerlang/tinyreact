@@ -117,7 +117,7 @@ var Component = function () {
                 }
 
                 shoudUpdate && _this.componentWillUpdate && _this.componentWillUpdate(_this.props, state);
-                _this.state = state;
+                _this.state = Object.assign(_this.state, state);
 
                 if (!shoudUpdate) {
                     return; // do nothing just return
@@ -613,7 +613,7 @@ function diffObject(leftProps, rightProps) {
    * Created by apple on 2017/8/30.
    */
 function getDOM(comp) {
-    var rendered = comp.__rendered;
+    var rendered = comp;
     while (rendered instanceof _Component2.default) {
         //判断对象是否是dom
         rendered = rendered.__rendered;
@@ -734,10 +734,15 @@ var TestApp = function (_Component) {
 var App1 = function (_Component2) {
     _inherits(App1, _Component2);
 
-    function App1() {
+    function App1(props) {
         _classCallCheck(this, App1);
 
-        return _possibleConstructorReturn(this, (App1.__proto__ || Object.getPrototypeOf(App1)).apply(this, arguments));
+        var _this2 = _possibleConstructorReturn(this, (App1.__proto__ || Object.getPrototypeOf(App1)).call(this, props));
+
+        _this2.state = {
+            odd: false
+        };
+        return _this2;
     }
 
     _createClass(App1, [{
@@ -748,9 +753,13 @@ var App1 = function (_Component2) {
             return (0, _createElement2.default)(
                 'div',
                 { onClick: function onClick(e) {
-                        _this3.setState({});
+                        _this3.setState({ odd: !_this3.state.odd });
                     } },
-                (0, _createElement2.default)(TestApp, null)
+                this.state.odd ? [] : [(0, _createElement2.default)(
+                    'div',
+                    null,
+                    'hi'
+                )]
             );
         }
     }]);
@@ -758,7 +767,7 @@ var App1 = function (_Component2) {
     return App1;
 }(_Component4.default);
 
-(0, _render2.default)((0, _createElement2.default)(_ComplexComp2.default, null), document.getElementById("root"));
+(0, _render2.default)((0, _createElement2.default)(App1, null), document.getElementById("root"));
 
 /***/ }),
 /* 6 */

@@ -173,23 +173,7 @@ function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
     ...
 }
 ```
-2. diffDOM 的时候： a. remove多余的节点； b. render子节点的时候olddomOrComp = olddom.__rendered[i]
-```javascript 1.7
-function diffDOM(vnode, parent, comp, olddom) {
-    ...
-    olddom.__rendered.slice(vnode.children.length)  // <--- 移除多余 子节点
-        .forEach(element => {
-            olddom.removeChild(getDOM(element))
-        })
-
-    olddom.__rendered = olddom.__rendered.slice(0, vnode.children.length)
-    for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, olddom.__rendered[i], i)
-    }
-    olddom.__vnode = vnode
-}
-```
-3. 组件实例
+2. 组件实例
 ```javascript 1.7
 else if (typeof vnode.nodeName == "function") {
     ...
@@ -205,6 +189,22 @@ else if (typeof vnode.nodeName == "function") {
         }
     }
     ...
+}
+```
+3. diffDOM 的时候： a. remove多余的节点； b. render子节点的时候olddomOrComp = olddom.__rendered[i]
+```javascript 1.7
+function diffDOM(vnode, parent, comp, olddom) {
+    ...
+    olddom.__rendered.slice(vnode.children.length)  // <--- 移除多余 子节点
+        .forEach(element => {
+            olddom.removeChild(getDOM(element))
+        })
+
+    olddom.__rendered = olddom.__rendered.slice(0, vnode.children.length)
+    for(let i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], olddom, null, olddom.__rendered[i], i)
+    }
+    olddom.__vnode = vnode
 }
 ```
 
@@ -284,9 +284,9 @@ function diffDOM(vnode, parent, comp, olddom) {
         })
 
     const __renderedArr = olddom.__rendered.slice(0, vnode.children.length)
-    olddom.__rendered = new RenderedHelper(__renderedArr)
+    olddom.__rendered = __renderedArr
     for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, __renderedArr[i], i) // olddomOrComp 存在olddom.__rendered
+        render(vnode.children[i], olddom, null, __renderedArr[i], i) 
     }
     olddom.__vnode = vnode
 }

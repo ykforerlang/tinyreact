@@ -118,6 +118,11 @@ function setAttrs(dom, props) {
             return
         }
 
+        if(k == "value") {
+            dom.value = v
+            return
+        }
+
         if(k == "style") {
             if(typeof v == "string") {
                 dom.style.cssText = v //IE
@@ -146,6 +151,11 @@ function removeAttrs(dom, props) {
     for(let k in props) {
         if(k == "className") {
             dom.removeAttribute("class")
+            continue
+        }
+
+        if(k == "value") {
+            dom.value = ""
             continue
         }
 
@@ -180,6 +190,11 @@ function diffAttrs(dom, newProps, oldProps) {
 
         if(k == "className") {
             dom.setAttribute("class", v)
+            continue
+        }
+
+        if(k == "value") {
+            dom.value = v
             continue
         }
 

@@ -60,11 +60,50 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 3);
+/******/ 	return __webpack_require__(__webpack_require__.s = 4);
 /******/ })
 /************************************************************************/
 /******/ ([
 /* 0 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.createElement = exports.Component = undefined;
+
+var _Component = __webpack_require__(1);
+
+var _Component2 = _interopRequireDefault(_Component);
+
+var _render = __webpack_require__(2);
+
+var _render2 = _interopRequireDefault(_render);
+
+var _createElement = __webpack_require__(5);
+
+var _createElement2 = _interopRequireDefault(_createElement);
+
+function _interopRequireDefault(obj) {
+    return obj && obj.__esModule ? obj : { default: obj };
+}
+
+exports.default = {
+    Component: _Component2.default,
+    createElement: _createElement2.default,
+    render: _render2.default
+}; /**
+    * Created by apple on 2017/8/21.
+    */
+
+exports.Component = _Component2.default;
+exports.createElement = _createElement2.default;
+
+/***/ }),
+/* 1 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -86,9 +125,9 @@ var _createClass = function () {
       * Created by apple on 2017/7/20.
       */
 
-var _render = __webpack_require__(1);
+var _render = __webpack_require__(2);
 
-var _util = __webpack_require__(2);
+var _util = __webpack_require__(3);
 
 function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -117,7 +156,7 @@ var Component = function () {
                 }
 
                 shoudUpdate && _this.componentWillUpdate && _this.componentWillUpdate(_this.props, state);
-                _this.state = state;
+                _this.state = Object.assign(_this.state, state);
 
                 if (!shoudUpdate) {
                     return; // do nothing just return
@@ -138,7 +177,7 @@ var Component = function () {
 exports.default = Component;
 
 /***/ }),
-/* 1 */
+/* 2 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -161,9 +200,9 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
 exports.default = render;
 exports.renderInner = renderInner;
 
-var _util = __webpack_require__(2);
+var _util = __webpack_require__(3);
 
-var _Component = __webpack_require__(0);
+var _Component = __webpack_require__(1);
 
 var _Component2 = _interopRequireDefault(_Component);
 
@@ -283,6 +322,11 @@ function setAttrs(dom, props) {
             return;
         }
 
+        if (k == "value") {
+            dom.value = v;
+            return;
+        }
+
         if (k == "style") {
             if (typeof v == "string") {
                 dom.style.cssText = v; //IE
@@ -310,6 +354,11 @@ function removeAttrs(dom, props) {
     for (var k in props) {
         if (k == "className") {
             dom.removeAttribute("class");
+            continue;
+        }
+
+        if (k == "value") {
+            dom.value = "";
             continue;
         }
 
@@ -343,6 +392,11 @@ function diffAttrs(dom, newProps, oldProps) {
 
         if (k == "className") {
             dom.setAttribute("class", v);
+            continue;
+        }
+
+        if (k == "value") {
+            dom.value = v;
             continue;
         }
 
@@ -448,7 +502,7 @@ function recoveryComp(comp) {
 }
 
 /***/ }),
-/* 2 */
+/* 3 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -461,7 +515,7 @@ exports.diffObject = diffObject;
 exports.getDOM = getDOM;
 exports.getDOMIndex = getDOMIndex;
 
-var _Component = __webpack_require__(0);
+var _Component = __webpack_require__(1);
 
 var _Component2 = _interopRequireDefault(_Component);
 
@@ -502,7 +556,7 @@ function diffObject(leftProps, rightProps) {
    * Created by apple on 2017/8/30.
    */
 function getDOM(comp) {
-    var rendered = comp.__rendered;
+    var rendered = comp;
     while (rendered instanceof _Component2.default) {
         //判断对象是否是dom
         rendered = rendered.__rendered;
@@ -515,7 +569,7 @@ function getDOMIndex(dom) {
 }
 
 /***/ }),
-/* 3 */
+/* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -523,17 +577,21 @@ function getDOMIndex(dom) {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _render = __webpack_require__(1);
+var _tinyreact = __webpack_require__(0);
 
-var _render2 = _interopRequireDefault(_render);
+var _tinyreact2 = _interopRequireDefault(_tinyreact);
 
-var _Component3 = __webpack_require__(0);
+var _HeaderInput = __webpack_require__(6);
 
-var _Component4 = _interopRequireDefault(_Component3);
+var _HeaderInput2 = _interopRequireDefault(_HeaderInput);
 
-var _createElement = __webpack_require__(4);
+var _TaskList = __webpack_require__(7);
 
-var _createElement2 = _interopRequireDefault(_createElement);
+var _TaskList2 = _interopRequireDefault(_TaskList);
+
+var _Footer = __webpack_require__(8);
+
+var _Footer2 = _interopRequireDefault(_Footer);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -546,72 +604,89 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 */
 
 
-var Dog = function (_Component) {
-    _inherits(Dog, _Component);
+var App = function (_Component) {
+    _inherits(App, _Component);
 
-    function Dog() {
-        _classCallCheck(this, Dog);
+    function App(props) {
+        _classCallCheck(this, App);
 
-        return _possibleConstructorReturn(this, (Dog.__proto__ || Object.getPrototypeOf(Dog)).apply(this, arguments));
-    }
+        var _this = _possibleConstructorReturn(this, (App.__proto__ || Object.getPrototypeOf(App)).call(this, props));
 
-    _createClass(Dog, [{
-        key: 'render',
-        value: function render() {
-            return (0, _createElement2.default)(
-                'div',
-                { style: { color: this.props.color } },
-                'i am a ',
-                this.props.color,
-                ' dog, click me to change color'
-            );
-        }
-    }]);
-
-    return Dog;
-}(_Component4.default);
-
-var colorArray = ['red', 'blue', 'yellow', 'black', 'green'];
-
-var PS = function (_Component2) {
-    _inherits(PS, _Component2);
-
-    function PS(props) {
-        _classCallCheck(this, PS);
-
-        var _this2 = _possibleConstructorReturn(this, (PS.__proto__ || Object.getPrototypeOf(PS)).call(this, props));
-
-        _this2.state = {
-            color: 'grey'
+        _this.state = {
+            list: [{
+                value: "init task",
+                status: "done"
+            }],
+            filter: 'all'
         };
-        return _this2;
+        return _this;
     }
 
-    _createClass(PS, [{
-        key: 'handleClick',
-        value: function handleClick() {
+    _createClass(App, [{
+        key: 'addTask',
+        value: function addTask(value) {
+            var list = this.state.list;
+            list.push({
+                value: value,
+                status: 'undo'
+            });
             this.setState({
-                color: colorArray[parseInt(Math.random() * 5)]
+                list: list
+            });
+        }
+    }, {
+        key: 'changeStatus',
+        value: function changeStatus(index) {
+            var list = this.state.list;
+            list[index].status = list[index].status === 'undo' ? 'done' : 'undo';
+            this.setState({
+                list: list
+            });
+        }
+    }, {
+        key: 'filterStatus',
+        value: function filterStatus(filter) {
+            this.setState({
+                filter: filter
             });
         }
     }, {
         key: 'render',
         value: function render() {
-            return (0, _createElement2.default)(
+            var _this2 = this;
+
+            var list = void 0;
+            if (this.state.filter === "all") {
+                list = this.state.list;
+            } else {
+                list = this.state.list.filter(function (element) {
+                    return element.status === _this2.state.filter;
+                });
+            }
+            console.log("render:", list, this.state);
+
+            return (0, _tinyreact.createElement)(
                 'div',
-                { onClick: this.handleClick.bind(this) },
-                (0, _createElement2.default)(Dog, { color: this.state.color })
+                null,
+                (0, _tinyreact.createElement)(_HeaderInput2.default, { addTask: this.addTask.bind(this) }),
+                (0, _tinyreact.createElement)(_TaskList2.default, {
+                    list: list,
+                    changeStatus: this.changeStatus.bind(this)
+                }),
+                (0, _tinyreact.createElement)(_Footer2.default, {
+                    filterStatus: this.filterStatus.bind(this)
+                })
             );
         }
     }]);
 
-    return PS;
-}(_Component4.default);
+    return App;
+}(_tinyreact.Component);
 
-(0, _render2.default)((0, _createElement2.default)(PS, null), document.getElementById("root"));
+_tinyreact2.default.render((0, _tinyreact.createElement)(App, null), document.getElementById("root"));
 
 /***/ }),
-/* 4 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -653,6 +728,219 @@ function createElement(comp, props) {
         children: children
     };
 }
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _tinyreact = __webpack_require__(0);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Created by apple on 2017/9/13.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+
+var HeaderInput = function (_Component) {
+    _inherits(HeaderInput, _Component);
+
+    function HeaderInput(props) {
+        _classCallCheck(this, HeaderInput);
+
+        var _this = _possibleConstructorReturn(this, (HeaderInput.__proto__ || Object.getPrototypeOf(HeaderInput)).call(this, props));
+
+        _this.state = {
+            value: ''
+        };
+        return _this;
+    }
+
+    _createClass(HeaderInput, [{
+        key: 'handleBlur',
+        value: function handleBlur(e) {
+            this.setState({
+                value: e.target.value
+            });
+        }
+    }, {
+        key: 'handleClick',
+        value: function handleClick() {
+            this.props.addTask(this.state.value);
+            this.setState({
+                value: ''
+            });
+        }
+    }, {
+        key: 'render',
+        value: function render() {
+            return (0, _tinyreact.createElement)(
+                'div',
+                null,
+                (0, _tinyreact.createElement)('input', { value: this.state.value,
+                    onBlur: this.handleBlur.bind(this)
+                }),
+                (0, _tinyreact.createElement)(
+                    'button',
+                    { onClick: this.handleClick.bind(this) },
+                    '\u589E\u52A0'
+                )
+            );
+        }
+    }]);
+
+    return HeaderInput;
+}(_tinyreact.Component);
+
+exports.default = HeaderInput;
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _tinyreact = __webpack_require__(0);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Created by apple on 2017/9/13.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+
+var TaskList = function (_Component) {
+    _inherits(TaskList, _Component);
+
+    function TaskList() {
+        _classCallCheck(this, TaskList);
+
+        return _possibleConstructorReturn(this, (TaskList.__proto__ || Object.getPrototypeOf(TaskList)).apply(this, arguments));
+    }
+
+    _createClass(TaskList, [{
+        key: 'render',
+        value: function render() {
+            var _this2 = this;
+
+            return (0, _tinyreact.createElement)(
+                'div',
+                null,
+                (0, _tinyreact.createElement)(
+                    'ul',
+                    null,
+                    this.props.list.map(function (element, index) {
+                        return (0, _tinyreact.createElement)(
+                            'li',
+                            {
+                                style: { textDecoration: element.status === 'done' ? 'line-through' : 'none' },
+                                onClick: function onClick(e) {
+                                    return _this2.props.changeStatus(index);
+                                }
+                            },
+                            element.value
+                        );
+                    })
+                )
+            );
+        }
+    }]);
+
+    return TaskList;
+}(_tinyreact.Component);
+
+exports.default = TaskList;
+
+/***/ }),
+/* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _tinyreact = __webpack_require__(0);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Created by apple on 2017/9/13.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
+
+
+var Footer = function (_Component) {
+    _inherits(Footer, _Component);
+
+    function Footer() {
+        _classCallCheck(this, Footer);
+
+        return _possibleConstructorReturn(this, (Footer.__proto__ || Object.getPrototypeOf(Footer)).apply(this, arguments));
+    }
+
+    _createClass(Footer, [{
+        key: 'render',
+        value: function render() {
+            var _this2 = this;
+
+            return (0, _tinyreact.createElement)(
+                'div',
+                null,
+                (0, _tinyreact.createElement)(
+                    'button',
+                    { onClick: function onClick(e) {
+                            return _this2.props.filterStatus('all');
+                        } },
+                    'all'
+                ),
+                (0, _tinyreact.createElement)(
+                    'button',
+                    { onClick: function onClick(e) {
+                            return _this2.props.filterStatus('done');
+                        } },
+                    'done'
+                ),
+                (0, _tinyreact.createElement)(
+                    'button',
+                    { onClick: function onClick(e) {
+                            return _this2.props.filterStatus('undo');
+                        } },
+                    'undo'
+                )
+            );
+        }
+    }]);
+
+    return Footer;
+}(_tinyreact.Component);
+
+exports.default = Footer;
 
 /***/ })
 /******/ ]);

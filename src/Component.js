@@ -19,7 +19,7 @@ export default class Component {
             }
 
             shoudUpdate && this.componentWillUpdate && this.componentWillUpdate(this.props, state)
-            this.state = state
+            this.state = Object.assign(this.state, state)
 
             if (!shoudUpdate) {
                 return // do nothing just return
