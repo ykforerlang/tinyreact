@@ -88,13 +88,7 @@ var _createClass = function () {
 
 var _render = __webpack_require__(3);
 
-var _render2 = _interopRequireDefault(_render);
-
 var _util = __webpack_require__(4);
-
-function _interopRequireDefault(obj) {
-    return obj && obj.__esModule ? obj : { default: obj };
-}
 
 function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -131,7 +125,8 @@ var Component = function () {
 
                 var vnode = _this.render();
                 var olddom = (0, _util.getDOM)(_this);
-                (0, _render2.default)(vnode, olddom.parentNode, _this, _this.__rendered);
+                var myIndex = (0, _util.getDOMIndex)(olddom);
+                (0, _render.renderInner)(vnode, olddom.parentNode, _this, _this.__rendered, myIndex);
                 _this.componentDidUpdate && _this.componentDidUpdate();
             }, 0);
         }
@@ -275,6 +270,7 @@ var _typeof = typeof Symbol === "function" && _typeof2(Symbol.iterator) === "sym
     */
 
 exports.default = render;
+exports.renderInner = renderInner;
 
 var _util = __webpack_require__(4);
 
@@ -287,18 +283,13 @@ function _interopRequireDefault(obj) {
 }
 
 /**
- * 替换新的Dom， 如果没有在最后插入
- * @param parent
- * @param newDom
- * @param myIndex
+ * 渲染vnode成实际的dom
+ * @param vnode 虚拟dom表示
+ * @param parent 实际渲染出来的dom，挂载的父元素
  */
-function setNewDom(parent, newDom, myIndex) {
-    var old = parent.childNodes[myIndex];
-    if (old) {
-        parent.replaceChild(newDom, old);
-    } else {
-        parent.appendChild(newDom);
-    }
+function render(vnode, parent) {
+    parent.__rendered = [];
+    renderInner(vnode, parent, null, null, 0);
 }
 
 /**
@@ -309,7 +300,7 @@ function setNewDom(parent, newDom, myIndex) {
  * @param olddomOrComp  老的dom/组件实例
  * @param myIndex 在dom节点的位置
  */
-function render(vnode, parent, comp, olddomOrComp, myIndex) {
+function renderInner(vnode, parent, comp, olddomOrComp, myIndex) {
     var dom = void 0;
     if (typeof vnode === "string" || typeof vnode === "number") {
         if (olddomOrComp && olddomOrComp.splitText) {
@@ -368,13 +359,28 @@ function render(vnode, parent, comp, olddomOrComp, myIndex) {
         }
 
         var innerVnode = inst.render();
-        render(innerVnode, parent, inst, inst.__rendered, myIndex);
+        renderInner(innerVnode, parent, inst, inst.__rendered, myIndex);
 
         if (olddomOrComp && olddomOrComp instanceof func) {
             inst.componentDidUpdate && inst.componentDidUpdate();
         } else {
             inst.componentDidMount && inst.componentDidMount();
         }
+    }
+}
+
+/**
+ * 替换新的Dom， 如果没有在最后插入
+ * @param parent
+ * @param newDom
+ * @param myIndex
+ */
+function setNewDom(parent, newDom, myIndex) {
+    var old = parent.childNodes[myIndex];
+    if (old) {
+        parent.replaceChild(newDom, old);
+    } else {
+        parent.appendChild(newDom);
     }
 }
 
@@ -497,6 +503,7 @@ function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
 
     dom.__rendered = [];
     dom.__vnode = vnode;
+    dom.__myIndex = myIndex; // 方便 getDOMIndex 方法
 
     if (comp) {
         comp.__rendered = dom;
@@ -509,7 +516,7 @@ function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
     setNewDom(parent, dom, myIndex);
 
     for (var i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], dom, null, null, i);
+        renderInner(vnode.children[i], dom, null, null, i);
     }
 }
 
@@ -527,7 +534,7 @@ function diffDOM(vnode, parent, comp, olddom) {
     var renderedArr = olddom.__rendered.slice(0, vnode.children.length);
     olddom.__rendered = renderedArr;
     for (var i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, renderedArr[i], i);
+        renderInner(vnode.children[i], olddom, null, renderedArr[i], i);
     }
 
     willRemoveArr.forEach(function (element) {
@@ -563,6 +570,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.diffObject = diffObject;
 exports.getDOM = getDOM;
+exports.getDOMIndex = getDOMIndex;
 
 var _Component = __webpack_require__(0);
 
@@ -611,6 +619,10 @@ function getDOM(comp) {
         rendered = rendered.__rendered;
     }
     return rendered;
+}
+
+function getDOMIndex(dom) {
+    return dom.__myIndex;
 }
 
 /***/ }),
@@ -746,9 +758,7 @@ var App1 = function (_Component2) {
     return App1;
 }(_Component4.default);
 
-var root = document.getElementById("root");
-root.__rendered = new _RenderedHelper2.default();
-(0, _render2.default)((0, _createElement2.default)(_ComplexComp2.default, null), root);
+(0, _render2.default)((0, _createElement2.default)(_ComplexComp2.default, null), document.getElementById("root"));
 
 /***/ }),
 /* 6 */

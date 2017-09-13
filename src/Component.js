@@ -1,8 +1,8 @@
 /**
  * Created by apple on 2017/7/20.
  */
-import render from './render'
-import { getDOM } from './util'
+import { renderInner } from './render'
+import { getDOM, getDOMIndex } from './util'
 
 export default class Component {
     constructor(props) {
@@ -27,7 +27,8 @@ export default class Component {
 
             const vnode = this.render()
             let olddom = getDOM(this)
-            render(vnode, olddom.parentNode, this, this.__rendered)
+            const myIndex = getDOMIndex(olddom)
+            renderInner(vnode, olddom.parentNode, this, this.__rendered, myIndex)
             this.componentDidUpdate && this.componentDidUpdate()
         }, 0)
     }

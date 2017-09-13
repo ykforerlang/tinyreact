@@ -41,3 +41,8 @@ export function getDOM(comp) {
     }
     return rendered
 }
+
+
+export function getDOMIndex(dom) {
+    return dom.__myIndex
+}

@@ -210,7 +210,7 @@ else if (typeof vnode.nodeName == "function") {
 
 所以完整的代码：
 ```jsx harmony
-function render(vnode, parent, comp, olddomOrComp) {
+function render(vnode, parent, comp, olddomOrComp, myIndex) {
     let dom
     if(typeof vnode === "string" || typeof vnode === "number" ) {
         if(olddomOrComp && olddomOrComp.splitText) {
@@ -219,17 +219,13 @@ function render(vnode, parent, comp, olddomOrComp) {
             }
         } else {
             dom = document.createTextNode(vnode)
-            parent.__rendered.replaceNullPush(dom, olddomOrComp) //comp 一定是null
+            parent.__rendered[myIndex] = dom //comp 一定是null
 
-            if(olddomOrComp) {
-                parent.replaceChild(dom, getDOM(olddomOrComp))
-            } else {
-                parent.appendChild(dom)
-            }
+            setNewDom(parent, dom, myIndex) 
         }
     } else if(typeof vnode.nodeName === "string") {
         if(!olddomOrComp || olddomOrComp.nodeName !== vnode.nodeName.toUpperCase()) {
-            createNewDom(vnode, parent, comp, olddomOrComp)
+            createNewDom(vnode, parent, comp, olddomOrComp, myIndex)
         } else {
             diffDOM(vnode, parent, comp, olddomOrComp)
         }
@@ -245,37 +241,33 @@ function render(vnode, parent, comp, olddomOrComp) {
             if (comp) {
                 comp.__rendered = inst
             } else {
-                parent.__rendered.replaceNullPush(inst, olddomOrComp)
+                parent.__rendered[myIndex] = inst    
             }
         }
 
         let innerVnode = inst.render()
-        render(innerVnode, parent, inst, inst.__rendered)
+        render(innerVnode, parent, inst, inst.__rendered, myIndex)
     }
 }
 
-function createNewDom(vnode, parent, comp, olddomOrComp) {
+function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
     let dom = document.createElement(vnode.nodeName)
 
-    dom.__rendered = new RenderedHelper()  // 创建dom的 设置 __rendered 引用
+    dom.__rendered = []  // 创建dom的 设置 __rendered 引用
     dom.__vnode = vnode
 
     if (comp) {
         comp.__rendered = dom
     } else {
-        parent.__rendered.replaceNullPush(dom, olddomOrComp)
+        parent.__rendered[myIndex] = dom
     }
 
     setAttrs(dom, vnode.props)
 
-    if(olddomOrComp) {
-        parent.replaceChild(dom, getDOM(olddomOrComp))
-    } else {
-        parent.appendChild(dom)
-    }
-
+    setNewDom(parent, dom, myIndex) 
+            
     for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], dom, null, null)
+        render(vnode.children[i], dom, null, null, i)
     }
 }
 
@@ -294,13 +286,39 @@ function diffDOM(vnode, parent, comp, olddom) {
     const __renderedArr = olddom.__rendered.slice(0, vnode.children.length)
     olddom.__rendered = new RenderedHelper(__renderedArr)
     for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, __renderedArr[i]) // olddomOrComp 存在olddom.__rendered
+        render(vnode.children[i], olddom, null, __renderedArr[i], i) // olddomOrComp 存在olddom.__rendered
     }
     olddom.__vnode = vnode
 }
+
+class Component {
+    constructor(props) {
+        this.props = props
+    }
+
+    setState(state) {
+        setTimeout(() => {
+            this.state = state
+
+          
+            const vnode = this.render()
+            let olddom = getDOM(this)
+            const myIndex = getDOMIndex(olddom)
+            render(vnode, olddom.parentNode, this, this.__rendered, myIndex)
+        }, 0)
+    }
+}
+function getDOMIndex(dom) {
+    const cn = dom.parentNode.childNodes
+    for(let i= 0; i < cn.length; i++) {
+        if (cn[i] === dom ) {
+            return i
+        }
+    }
+}
 ```
 ![Father_Tree](__rendered3_2.png)
-现在 __rendered链 完善了， setState触发的渲染, 都会先去尝试复用 组件实例。[在线演示]() 
+现在 __rendered链 完善了， setState触发的渲染, 都会先去尝试复用 组件实例。 [在线演示](http://jsfiddle.net/yankang/k8ypszLd/)
 
 ### 生命周期
 前面讨论的__rendered 和生命周期有 什么关系呢？ 生命周期是组件实例的生命周期， 之前的工作起码保证了一点: constructor 只会被调用一次了吧。。。
@@ -327,23 +345,20 @@ else if (typeof vnode.nodeName === "function") {
             inst.props = vnode.props
         } else {
             inst = new func(vnode.props)
-            inst.componentWillMount && inst.componentWillMount()  // <-- componentWillMount
+            inst.componentWillMount && inst.componentWillMount()
 
-            if (olddomOrComp) {
-                parent.removeChild(getDOM(olddomOrComp))
-            }
 
             if (comp) {
                 comp.__rendered = inst
             } else {
-                parent.__rendered.replaceNullPush(inst, olddomOrComp)
+                parent.__rendered[myIndex] = inst
             }
         }
 
         let innerVnode = inst.render()
-        render(innerVnode, parent, inst, inst.__rendered)
+        render(innerVnode, parent, inst, inst.__rendered, myIndex)
 
-        if(olddomOrComp && olddomOrComp instanceof func) {  // <-- 如果组件 可以被复用
+        if(olddomOrComp && olddomOrComp instanceof func) {
             inst.componentDidUpdate && inst.componentDidUpdate()
         } else {
             inst.componentDidMount && inst.componentDidMount()
@@ -418,7 +433,8 @@ setState(state) {
 
         const vnode = this.render()
         let olddom = getDOM(this)
-        render(vnode, olddom.parentNode, this, this.__rendered)
+        const myIndex = getDOMIndex(olddom)
+        render(vnode, olddom.parentNode, this, this.__rendered, myIndex)
         this.componentDidUpdate && this.componentDidUpdate() // <-- 需要调用下： componentDidUpdate
     }, 0)
 }
@@ -464,195 +480,84 @@ setState(state) {
 当组件要被销毁的时候， 调用组件的componentWillUnmount。 inst没有被复用的时候， 要销毁。 dom没有被复用的时候， 也要销毁， 而且是树形结构
 的递归操作。 有点像 render的递归， 直接看代码： 
 ```jsx harmony
-function recoveryDomOrComp(domOrComp) {
-    if (domOrComp instanceof Component) { // inst
-        domOrComp.componentWillUnmount && domOrComp.componentWillUnmount()
-        recoveryDomOrComp(domOrComp.__rendered)
-    } else if (domOrComp.__rendered instanceof RenderedHelper) { // dom like div/span...
-        domOrComp.parentNode.removeChild(domOrComp) //remove first
-
-        const childrens = domOrComp.__rendered.getInnerArr()
-        childrens.forEach(element => {
-            recoveryDomOrComp(element)
+function recoveryComp(comp) {
+    if (comp instanceof Component) {  // <--- component
+        comp.componentWillUnmount && comp.componentWillUnmount()
+        recoveryComp(comp.__rendered)
+    } else if (comp.__rendered instanceof Array) { // <--- dom like div/span
+        comp.__rendered.forEach(element => {
+            recoveryComp(element)
         })
-
-    } else { // textNode 节点
-        domOrComp.parentNode.removeChild(domOrComp)
+    } else {       // <--- TextNode
+        // do nothing
     }
 }
 ```
-recoveryDomOrComp 是这样的一个 递归函数： 
-   * 当domOrComp 为组件实例的时候， 首先调用：componentWillUnmount， 然后 recoveryDomOrComp(inst.__rendered)
-   * 当domOrComp 为DOM节点 （非文本 TextNode）, remove自己。 然后遍历 recoveryDomOrComp(子节点) 
-   * 当domOrComp 为TextNode，remove自己 
+recoveryComp 是这样的一个 递归函数： 
+   * 当domOrComp 为组件实例的时候， 首先调用：componentWillUnmount， 然后 recoveryDomOrComp(inst.__rendered) 。 这里的先后顺序关系很重要
+   * 当domOrComp 为DOM节点 （非文本 TextNode）, 遍历 recoveryDomOrComp(子节点) 
+   * 当domOrComp 为TextNode，nothing...
 与render一样， 由于组件 最终一定会render html的标签。 所以这个递归一定是能够正常返回的。
-<br/> 哪些地方需要调用recoveryDomOrComp ？ 
+<br/> 哪些地方需要调用recoveryComp ？ 
 1. 所有olddomOrComp 没有被复用的地方。 因为一旦olddomOrComp 不被复用， 一定有一个新的取得它， 它就要被销毁
 2. 多余的 子节点。 div 起初有3个子节点， setState之后变成了2个。 多出来的要被销毁
 ```jsx harmony
-
-```
-
-   
-
-
-
+function diffDOM(vnode, parent, comp, olddom) {
+    const {onlyInLeft, bothIn, onlyInRight} = diffObject(vnode.props, olddom.__vnode.props)
+    setAttrs(olddom, onlyInLeft)
+    removeAttrs(olddom, onlyInRight)
+    diffAttrs(olddom, bothIn.left, bothIn.right)
 
 
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-组件渲染前后， 我们怎么干预插入自己的操作呢？react提供了丰富的生命周期方法。
- 
-同样的，我们将给tinyreact加上以下的生命周期， 这些生命的意义和react对应的生命周期是完全等效的： 
-1. componentWillMount
-2. componentDidMount
-3. componentWillReceiveProps
-4. shouldComponentUpdate
-5. componentWillUpdate
-6. componentDidUpdate
-7. componentWillUnmount
-
-在[(二)](https://segmentfault.com/a/1190000011052656) 里面 我们对 DOM进行了 复用。 对于组件实例，是每次都会去new一个对象
-```javascript 1.7
-else if (typeof vnode.nodeName == "function") {
-        ...
-        let inst = new func(vnode.props)
-        ...
+    const willRemoveArr = olddom.__rendered.slice(vnode.children.length)
+    const renderedArr = olddom.__rendered.slice(0, vnode.children.length)
+    olddom.__rendered = renderedArr
+    for(let i = 0; i < vnode.children.length; i++) {
+        render(vnode.children[i], olddom, null, renderedArr[i], i)
     }
-```
-其实， inst有时是不需要重新创建的。 只需要从新设置 props， state， 然后render。 考虑下面的例子
-```javascript 1.7
-class SubA extends Component {
-    render() {
-        return <div>subA</div>
-    }
-}
-class SubB extends Component {
-    render() {
-        return <div>subB</div>
-    }
-}
 
-class App extends Component {
-    constructor(props) {
-        super(props)
-        this.state = {
-            num: 0
-        }
-    }
-    
-    render() {
-        return (
-            <div onClick={e =>{
-                this.setState({
-                    num: this.state.num + 1
-                })
-            }}>
-               {this.state.num > 1 ? <SubA/> : <SubB/> } 
-            </div>
-        )
-    }
+    willRemoveArr.forEach(element => {
+        recoveryComp(element)
+        olddom.removeChild(getDOM(element))
+    })
+
+    olddom.__vnode = vnode
 }
 ```
-初始的是SubA。 点击一次SubA。 再次点击， 以及之后的所有点击 都是SubB。 所以这里其实 只需要 创建两个实例(SubA, SubB各一个) 就够了， 
-而不是现在我们每点击一次 都会创建一个实例。 
 
-所以需要一个机制， 去获取上一次渲染的inst， 让我们可以避开重新渲染。 还记得[(一)](https://segmentfault.com/a/1190000010822571) 怎么寻找 "组件渲染的dom元素" 的方法的吗？
-![实例引用关系](__rendered.png)
+到这里， tinyreact 就有 生命周期了
 
-__rendered 引用纪录了 组件的实例链， 链的最终是DOM元素， 所以根据这个__rendered的引用，纪录了渲染的inst
-
-类似DOM的复用， 对相同类型的inst, 我们不新建实例。
-```javascript 1.7
-function render (vnode, parent, comp, olddomOrComp) {
-    ...
-    } else if (typeof vnode.nodeName == "function") {
-        let func = vnode.nodeName
-        let inst
-        if(olddomOrComp && olddomOrComp instanceof func) {
-            inst = olddomOrComp
-        } else {
-            inst = new func(vnode.props)
-            comp && (comp.__rendered = inst)
-        }
-
-        let innerVnode = inst.render()
-        render(innerVnode, parent, inst, inst.__rendered)
-    }
-    ...
-}    
+之前的代码 由于会用到  dom.__rendered。 所以：
+```jsx harmony
+const root = document.getElementById("root")
+root.__rendered = []
+render(<App/>, root)
 ```
-这里， 注意render 第4个参数 olddom --> olddomOrComp, 以及最后的render(innerVnode, parent, inst, inst.__rendered) 。 
-这样 相同的组件实例就可以重复使用。 对应的setState部分, createNewDom的修改
-```javascript 1.7
-setState(state) {
-    setTimeout(() => {
-        ...
-        render(vnode, olddom.parentNode, this, this.__rendered) // 传递this.__rendered 作为第四个参数
-    }, 0)
+为了不要在 调用render之前 设置：__rendered 做个小的改动 ：
+```jsx harmony
+/**
+ * 渲染vnode成实际的dom
+ * @param vnode 虚拟dom表示
+ * @param parent 实际渲染出来的dom，挂载的父元素
+ */
+export default function render(vnode, parent) {
+    parent.__rendered =[]  //<--- 这里设置 __rendered
+    renderInner(vnode, parent, null, null, 0)
 }
 
-function createNewDom(vnode, parent, comp, olddomOrComp) {
-    ...
-    if(olddomOrComp) {
-        parent.replaceChild(dom, getDOM(olddomOrComp)) // 这里可以替换的DOM元素， 需要找到olddomOrComp 对应的DOM元素
-    } else {
-        parent.appendChild(dom)
-    }
+function renderInner(vnode, parent, comp, olddomOrComp, myIndex) {
     ...
 }
 ```
 
-继续考虑下图的组件渲染： 
-![组件](__rendered3.png)
+### 其他
+tinyreact 还有很多功能没有实现：
+1. context
+2. 事件代理
+3. 多吃调用setState， 只render一次
+4. react 顶层Api
+。。。
 
-对应Father -> Son -> Grandson 是可以根据__rendered 来引用的， <br/>
-但是 这里的 Grandsonson1, Grandsonson2, Grandsonson3 怎么处理呢？
+tinyreat 有些地方参考了[preact](https://github.com/developit/preact) 
 
-
-
-
- 
-
-
-
-
+**[所有代码托管在git](https://github.com/ykforerlang/tinyreact)** 觉得不错给个 star  😄😄

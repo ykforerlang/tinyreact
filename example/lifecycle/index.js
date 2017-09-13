@@ -64,8 +64,4 @@ class App1 extends Component {
     }
 }
 
-
-
-const root = document.getElementById("root")
-root.__rendered = new RenderedHelper()
-render(<ComplexComp/>, root)
+render(<ComplexComp/>, document.getElementById("root"))

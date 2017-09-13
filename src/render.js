@@ -5,18 +5,13 @@ import { diffObject, getDOM } from './util'
 import Component from './Component'
 
 /**
- * 替换新的Dom， 如果没有在最后插入
- * @param parent
- * @param newDom
- * @param myIndex
+ * 渲染vnode成实际的dom
+ * @param vnode 虚拟dom表示
+ * @param parent 实际渲染出来的dom，挂载的父元素
  */
-function setNewDom(parent, newDom, myIndex) {
-    const old =  parent.childNodes[myIndex]
-    if (old) {
-        parent.replaceChild(newDom, old)
-    } else {
-        parent.appendChild(newDom)
-    }
+export default function render(vnode, parent) {
+    parent.__rendered =[]
+    renderInner(vnode, parent, null, null, 0)
 }
 
 /**
@@ -27,7 +22,7 @@ function setNewDom(parent, newDom, myIndex) {
  * @param olddomOrComp  老的dom/组件实例
  * @param myIndex 在dom节点的位置
  */
-export default function render(vnode, parent, comp, olddomOrComp, myIndex) {
+export function renderInner(vnode, parent, comp, olddomOrComp, myIndex) {
     let dom
     if(typeof vnode === "string" || typeof vnode === "number" ) {
         if(olddomOrComp && olddomOrComp.splitText) {
@@ -88,13 +83,28 @@ export default function render(vnode, parent, comp, olddomOrComp, myIndex) {
         }
 
         let innerVnode = inst.render()
-        render(innerVnode, parent, inst, inst.__rendered, myIndex)
+        renderInner(innerVnode, parent, inst, inst.__rendered, myIndex)
 
         if(olddomOrComp && olddomOrComp instanceof func) {
             inst.componentDidUpdate && inst.componentDidUpdate()
         } else {
             inst.componentDidMount && inst.componentDidMount()
         }
+    }
+}
+
+/**
+ * 替换新的Dom， 如果没有在最后插入
+ * @param parent
+ * @param newDom
+ * @param myIndex
+ */
+function setNewDom(parent, newDom, myIndex) {
+    const old =  parent.childNodes[myIndex]
+    if (old) {
+        parent.replaceChild(newDom, old)
+    } else {
+        parent.appendChild(newDom)
     }
 }
 
@@ -218,6 +228,7 @@ function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
 
     dom.__rendered = []
     dom.__vnode = vnode
+    dom.__myIndex = myIndex  // 方便 getDOMIndex 方法
 
     if (comp) {
         comp.__rendered = dom
@@ -230,7 +241,7 @@ function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
     setNewDom(parent, dom, myIndex)
 
     for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], dom, null, null, i)
+        renderInner(vnode.children[i], dom, null, null, i)
     }
 }
 
@@ -245,7 +256,7 @@ function diffDOM(vnode, parent, comp, olddom) {
     const renderedArr = olddom.__rendered.slice(0, vnode.children.length)
     olddom.__rendered = renderedArr
     for(let i = 0; i < vnode.children.length; i++) {
-        render(vnode.children[i], olddom, null, renderedArr[i], i)
+        renderInner(vnode.children[i], olddom, null, renderedArr[i], i)
     }
 
     willRemoveArr.forEach(element => {
