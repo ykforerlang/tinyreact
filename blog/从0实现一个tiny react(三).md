@@ -1,5 +1,5 @@
 # 从0实现一个tiny react（三）生命周期
-在给tinyreact加生命周期之前，先考虑一个 组件实例的复用
+在给tinyreact加生命周期之前，先考虑 组件实例的复用 这个前置问题
 
 
 ### 复用组件实例
@@ -27,6 +27,7 @@ class C extends Component {
 是绝对不可能 出现下图这种树结构 (与render函数返回单根的特性矛盾)
 ![Error_Tree](__rendered4.png)
 
+这保证了__rendered引用 一定指向一个inst／dom。 可以通过__rendered来复用实例。 下面我们讨论怎么根据__rendered 复用inst
 
 假如在 Father里面调用 setState？ 按照现在render 函数的做法:
 ```javascript 1.7
@@ -50,7 +51,7 @@ else if (typeof vnode.nodeName == "function") {
 对于1， 2 每次setState的时候都会新建inst， 在这里是可以复用之前创建好的inst实例的。 
 
 但是如果一个组件 初始渲染为 '\<A/\>', setState 之后渲染为 '\<B/\>' 这种情况呢？ 那inst就不能复用了， 类比一下 DOM 里的 div --> span
-把render 第四个参数 old ---> olddomOrComp ， 通过这个参数来判断 dom 或者inst 是否可以复用：
+。 把render 第四个参数 old ---> olddomOrComp ， 通过这个参数来判断 dom 或者inst 是否可以复用：
 ```jsx harmony
 //inst 是否可以复用
 function render (vnode, parent, comp, olddomOrComp) {
@@ -159,7 +160,7 @@ parent.__rendered 数组中。 那怎么判断 创建出来的是 "直接子节�
 很明显， 只有 dom下的 "直接子节点" comp才是null， 其他的情况， comp肯定不是null， 比如 Son的comp是Father， Gsss1
 的comp是Grandsonson1。。。
 
-当setState重新渲染的时候， 如果老的dom／inst没有被复用， 则应该用新的dom／inst 替换
+并且当setState重新渲染的时候， 如果老的dom／inst没有被复用， 则应该用新的dom／inst 替换
 <br/> 
 1. 创建dom的时候。
 ```javascript 1.7
@@ -388,7 +389,7 @@ else if (typeof vnode.nodeName === "function") {
 否则是基于 shouldComponentUpdate的返回值。 这个方法接受两个参数 newProps, newState 。 
 另外由于 props和 state(setState) 改变都会引起 shouldComponentUpdate调用， 所以: 
 ```jsx harmony
-function render(vnode, parent, comp, olddomOrComp) {
+function render(vnode, parent, comp, olddomOrComp, myIndex) {
     ...
     else if (typeof vnode.nodeName === "function") {
             let func = vnode.nodeName
@@ -444,7 +445,7 @@ setState(state) {
 
 当 shoudUpdate == true 的时候。 会调用： componentWillUpdate， 参数为newProps和newState。 这个函数调用之后，就会把nextProps和nextState分别设置到this.props和this.state中。
 ```jsx harmony
-function render(vnode, parent, comp, olddomOrComp) {
+function render(vnode, parent, comp, olddomOrComp, myIndex) {
     ...
     else if (typeof vnode.nodeName === "function") {
     ...
@@ -551,13 +552,20 @@ function renderInner(vnode, parent, comp, olddomOrComp, myIndex) {
 ```
 
 ### 其他
-tinyreact 还有很多功能没有实现：
+tinyreact 未实现功能：
 1. context
 2. 事件代理
 3. 多吃调用setState， 只render一次
 4. react 顶层Api
-。。。
+5. 。。。
 
-tinyreat 有些地方参考了[preact](https://github.com/developit/preact) 
+tinyreat 有些地方参考了[preact](https://github.com/developit/preact)
+ 
+npm包: 
+```
+     npm install tinyreact --save
+```
+[所有代码托管在git](https://github.com/ykforerlang/tinyreact) example 目录下有blog中的例子
 
-**[所有代码托管在git](https://github.com/ykforerlang/tinyreact)** 觉得不错给个 star  😄😄
+[经典的TodoList](https://ykforerlang.github.io/todo/index.html)。 项目 [代码](https://github.com/ykforerlang/todo)
+
