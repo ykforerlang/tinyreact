@@ -1,5 +1,5 @@
 # tinyreact
-a tiny react-like lib . play [todoList](https://ykforerlang.github.io/todo/index.html)
+a tiny react-like lib . play [todoList](https://ykforerlang.github.io/todo/index.html) written by tinyreact
 
 ### install
 ```
