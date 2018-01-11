@@ -33,3 +33,15 @@ export default class Component {
         }, 0)
     }
 }
+
+
+var a = {
+    "nodeName": "div",
+    "props": {},
+    "children": ["i", {"nodeName": "div", "props": {}, "children": ["am"]}, {
+        "nodeName": "div",
+        "props": {},
+        "children": ["grandson"]
+    }]
+}
+

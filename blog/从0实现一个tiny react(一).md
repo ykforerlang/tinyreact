@@ -2,7 +2,7 @@
 学习一个库的最好的方法就是实现一个， 注： 实际react的代码可能相去甚远。
 ### 支持JSX
 react组件可以完全不用JSX， 用纯js来写。 JSX语法经过babel转化就是纯js代码， 譬如：
-```jsx harmony
+```javascript
 const hw = <div>Hello World</div>
 
 const hw = React.createElement('div', null, "Hello World")
@@ -25,9 +25,9 @@ const hw = React.createElement('div', null, "Hello World")
 
 
 ### 渲染
-react 中virtual-dom的概念， 使用一个 js的结构vnode来描述DOM 节点。 然后， 从vnode构渲染出DOM树。 
+react 中virtual-dom的概念， 使用一个 js的结构vnode来描述DOM 节点。 然后， 从vnode渲染出DOM树。 
 这个 vnode由3个属性描述：nodeName(div, Son...), props, children(vnode 组成的数组), 所以 createElement的最简实现
-```jsx harmony
+```javascript
 function createElement(comp, props, ...args) {
     let children = []
     for(let i = 0; i< args.length;i++){
@@ -44,28 +44,64 @@ function createElement(comp, props, ...args) {
     }
 }
 ```
-从vnode 渲染到dom， 考虑下面的结构
-```jsx harmony
-class Grandson extends Component {
-    render() {
-        return React.createElement('div', null, "i am grandson") //<div>i am grandson</div>
-    }
-}
-class Son extends Component {
-    render() {
-        return  React.createElement(Grandson) // <Grandson/>
-    }
-}
+从vnode 怎么渲染到dom? 先想一下我们在react里面书写下面的组件的时候
+```javascript
 class Father extends Component {
     render() {
-        return React.createElement(Son)//<Son/>
+        return (<Son/>) // React.createElement(Son)  --> {nodeName: Son, props:{}, children:[]}
     }
 }
+
+class Son extends Component {
+    render() {
+        return (<Grandson/>) // React.createElement(Grandson) --> {nodeName: Grandson, props:{}, children:[]}
+    }
+}
+
+/**
+*React.createElement(
+*                "div",
+*                null,
+*                "i",
+*                React.createElement(
+*                    "div",
+*                    null,
+*                    "am"
+*                ),
+*                React.createElement(GrandText, null)
+*            );
+*/
+class Grandson extends Component { 
+    render() {
+        return (
+            <div>
+                i
+                <div>am</div>
+                <GrandText/>
+            </div>
+        ) 
+    }
+}
+
+class GrandText extends  Component {
+    render() {
+        return (
+            <div>grandson</div> // React.createElement(Grandson) 
+        )
+    }
+}
+
+
+render(<Father/>, document.getElementById('root'))
 ```
-最终渲染出来的就是一个DOM （一个 div 包含一个TextNode (i am grandson))， 渲染的过程就是递归的处理Component的render， 直到遇到html标签
+在react里， 最终渲染出来的就是一个i am grandson。
+渲染的过程就是: 渲染Father的Vnode  -> 渲染Son的Vnode -> 渲染Grandson的Vnode -> 渲染div -> 渲染i -> 渲染<div>am</div> -> 渲染GrandText。
+显然这是一个递归的过程：递归的中止条件是 渲染html标签。
   1. 当 nodeName 是 html标签， 直接操作dom
   2. 当 nodeName 是 react组件  递归操作 组件render返回的vnode
-```jsx harmony
+  
+暂时先不考虑 dom操作， 只考虑这个递归方法， 代码如下：   
+```javascript
 function renderVDOM(vnode) {
     if(typeof vnode == "string") { // 字符串 "i an grandson"
         return vnode
@@ -75,11 +111,11 @@ function renderVDOM(vnode) {
             props: vnode.props,
             children: []
         }
-        for(let i = 0; i < vnode.children.length; i++) {
+        for(let i = 0; i < vnode.children.length; i++) {   
             result.children.push(renderVDOM(vnode.children[i]))
         }
         return result
-    } else if (typeof vnode.nodeName == "function") {
+    } else if (typeof vnode.nodeName == "function") { // 如果是function
         let func = vnode.nodeName
         let inst = new func(vnode.props)
         let innerVnode = inst.render()
@@ -90,16 +126,18 @@ function renderVDOM(vnode) {
 执行上面的结构将返回 ([jsfiddle演示地址](http://jsfiddle.net/yankang/y9jwy5dr/)）)： 
 ```json
 {
-  "nodeName": "div",
-  "props": {},
-  "children": [
-    "i am grandson"
-  ]
+    "nodeName": "div",
+    "props": {},
+    "children": ["i", {"nodeName": "div", "props": {}, "children": ["am"]}, {
+        "nodeName": "div",
+        "props": {},
+        "children": ["grandson"]
+    }]
 }
-
 ```
-考虑实际DOM操作， 代码如下： 
-```javascript 1.7
+
+加入实际DOM操作， 代码如下： 
+```javascript
 function render(vnode, parent) {
     let dom
     if(typeof vnode == "string") {
@@ -162,56 +200,49 @@ function setAttrs(dom, props) {
    * vnode是字符串的是， 创建textNode节点
    * 当vnode.nodeName是 字符串的时候， 创建dom节点， 根据props设置节点属性， 遍历render children
    * 当vnode.nodeName是 function的时候， 获取render方法的返回值 vnode'， 执行render(vnode')
-
-
-**[git代码分支](https://github.com/ykforerlang/tinyreact/tree/simpleRenderNoPropsState)**   
-   
+  
 ### props 和 state
-f(props, state) => v 。 组件的渲染结果由 render方法， props， state决定。 基类Component 设置props
-```javascript 1.7
-function render(vnode, parent) {
-    ...
-    } else if (typeof vnode.nodeName == "function") {
-        let func = vnode.nodeName
-        let inst = new func(vnode.props)
-        let innerVnode = inst.render()  // this.props
-        render(innerVnode, parent)
-    }
-    ...
-}
+v = f(props, state)。 组件的渲染结果由 render方法， props， state共同决定，之前只是讨论了render， 现在引入 props， state。 
 
+对于props， 父组件传递过来， 不可变。 设置到属性上面。 由基类Component 设置props
+```javascript
 class Component {
     constructor(props) {
         this.props = props
     }
 }
 ```
-对于 state, 当调用组件的setState方法的时候, 简单来说就是渲染一个新DOM树， 替换老的DOM。 所以 
+
+对于 state, 在组件的生命期内是可以修改的，当调用组件的setState方法的时候, 其实就是重新渲染 用一个新DOM树替换老的DOM:
+`parent.replaceChild (newdom, olddom ) `,
+比如当我在 GrandText 上调用setState。 就是父div 把GrandText渲染出来的dom 替换一下。  
+所以 
 1. 组件实例 必须有机制获取到 olddom
 2. 同时 render方法的第二个参数是 parent。 组件实例必须有机制获取到 parentDOM
-这2个问题其实是一个问题。  parent = olddom.parentNode 。 这里采用的机制是 每个组件实例 记住 直接渲染出的组件实例／DOM。 下图：
+这2个问题其实是一个问题。  parent = olddom.parentNode, 所以 `olddom.parentNode.replaceChild (newdom, olddom )` 。 现在的关键就是获取到olddom，
+这里采用的机制是 每个组件实例 记住 直接渲染出的组件实例／DOM（通过__rendered属性）。 下图：
 ![实例引用关系](__rendered.png)
 代码实现： 
-```javascript 1.7
+```javascript
 function render (vnode, parent, comp) {
     let dom
     if(typeof vnode == "string") {
-        ...
+        const dom = ...  // 创建文本节点
         comp && (comp.__rendered = dom)
-        ...
+        ...  // other op
     } else if(typeof vnode.nodeName == "string") {
-        ...
+        const dom = ... // 创建 dom节点
         comp && (comp.__rendered = dom)
-        ...
+        ... // other op
     } else if (typeof vnode.nodeName == "function") {
-        ...
+        const inst = ... // 创建 组件实例
         comp && (comp.__rendered = inst)
-        ...
+        ... // other op
     }
 }
 ```
 其中 comp 参数代表 "我是被谁渲染的"。 获取olddom的代码实现： 
-```javascript 1.7
+```javascript
 function getDOM(comp) {
     let rendered = comp.__rendered
     while (rendered instanceof Component) { //判断对象是否是dom
@@ -221,7 +252,7 @@ function getDOM(comp) {
 }
 ```
 调用 setState 使用olddom替换老的dom 代码如下：
-```javascript 1.7
+```javascript
 function render(vnode, parent, comp, olddom) {
     let dom
     if(typeof vnode == "string") {
@@ -247,7 +278,7 @@ function render(vnode, parent, comp, olddom) {
 }
 ```
 拼凑一下以上功能， 完整代码实现：
-```javascript 1.7
+```javascript
 ///Component
 class Component {
     constructor(props) {
@@ -320,10 +351,10 @@ function render (vnode, parent, comp, olddom) {
 **[git代码分支](https://github.com/ykforerlang/tinyreact/tree/propsAndState)**
 
 
-### 敬请期待      
-**[从0实现一个tiny react(二) virtual-dom]()** 
+### 相关文章     
+**[从0实现一个tiny react(二) virtual-dom](https://segmentfault.com/a/1190000011052656)** 
 
-**[从0实现一个tiny react(三) 生命周期]()**  
+**[从0实现一个tiny react(三) 生命周期](https://segmentfault.com/a/1190000011156505)**  
       
 
 
