@@ -347,9 +347,13 @@ function render (vnode, parent, comp, olddom) {
 
 总结一下： render方法负责把vnode渲染到实际的DOM， 如果组件渲染的DOM已经存在， 就替换， 并且保持一个 __rendered的引用链
 
-
-**[git代码分支](https://github.com/ykforerlang/tinyreact/tree/propsAndState)**
-
+### 其他
+代码托管在[github](https://github.com/ykforerlang/tinyreact)。 觉得有帮助，点个star。哈哈哈。。。
+本文所讲的代码部分在 propsAndState 这个tag上：
+```
+git clone https://github.com/ykforerlang/tinyreact.git
+git branch [yourbranchname] propsAndState
+```
 
 ### 相关文章     
 **[从0实现一个tiny react(二) virtual-dom](https://segmentfault.com/a/1190000011052656)** 
