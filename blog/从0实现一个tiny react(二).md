@@ -1,4 +1,8 @@
 # 从0实现一个tiny react（二）
+ui = f(d)！ 这是react考虑ui的方式，开发者可以把重心放到d 数据上面来了。 从开发者的角度来讲 d一旦改变，react将会把ui重新渲染，使其再次满足
+ui = f(d), 开发者没有任何dom操作， 交给react就好！！
+
+怎么重新渲染呢？ (一)文 中我们实现了一种方式， state改变的时候，用新的dom树替换一下老的dom树， 这是完全可行的。
 考虑一下这个例子 [在线演示地址](http://jsfiddle.net/yankang/z0e9ngwL/): 
 ```javascript 1.7
 class AppWithNoVDOM extends Component {
@@ -59,11 +63,16 @@ setState(state) {
 ...
 ```
 我们在 render, setState 设置下时间点。 在10000万个div的情况下， 第一次render和setState触发的render 耗时大概在180ms （可能跟机器配置有关）
-首次render将会创建大量的DOM元素， 耗时不可避免。 但是setState引起的渲染， 完全是可以复用之前创建的dom的, 因为这里只是调用一下setState，并没有实质操作， 实际上DOM一点也没改。 <br/>
-毕竟dom操作是很慢
+当点击的时候， 由于调用`this.setState({})`, 页面将会重新渲染， 再次建立10000万个div， 但是实际上这里的DOM一点也没改。
+应用越复杂， 无用功越多，卡顿越明显
 
+为了解决这个问题， react提出了virtual-dom的概念：vnode(纯js对象) '代表' dom， 在渲染之前， 先比较出oldvnode和newvode的 区别。 然后增量的
+更新dom。 virtual-dom 使得ui=f(d) 得以在实际项目上使用。 
+（注意： virtual-dom 并不会加快应用速度， 只是让应用在不直接操作dom的情况下，通过暴力的比较，增量更新 让应用没有那么慢）
+
+如何增量更新呢？
 ### 复用DOM
-回想一下, 在 [(一)](https://segmentfault.com/a/1190000010822571) 里面对于每一个判定为 dom类型的VDOM， 是直接创建一个新的DOM：
+回想一下, 在 [(一)](https://segmentfault.com/a/1190000010822571) render函数 里面对于每一个判定为 dom类型的VDOM， 是直接创建一个新的DOM：
 ```javascript 1.7
 ...
 else if(typeof vnode.nodeName == "string") {
@@ -73,7 +82,7 @@ else if(typeof vnode.nodeName == "string") {
 ...
 ```
 一定要创建一个  新的DOM 结构吗？<br/>
-考虑这种情况：假如一个组件， 初次渲染为 renderBefore， 调用setState再次渲染为 renderAfter  调用setState再再次渲染为 renderAfterAfter。 VDOM如下
+考虑这种情况：假如一个组件， 初次渲染为 renderBefore， 调用setState再次渲染为 renderAfter  调用setState再再次渲染为 renderAfterAfter。 VNODE如下
 ```javascript 1.7
 const renderBefore = {
     tagName: 'div',
@@ -99,16 +108,16 @@ const renderAfterAfter = {
     children:[vnode1, vnode2, vnode3]
 }
 ```
-renderBefore 和renderAfter 都是div， props和children有部分区别，可以通过DOM操作把 rederBefore 变化为renderAfter， 从而避开DOM创建。 而 renderAfter和renderAfterAfter
+renderBefore 和renderAfter 都是div， 只不过props和children有部分区别，那我们是不是可以通过修改DOM属性， 修改DOM子节点，把 rederBefore 变化为renderAfter呢？， 这样就避开了DOM创建。 而 renderAfter和renderAfterAfter
 属于不同的DOM类型， 浏览器还没提供修改DOM类型的Api，是无法复用的， 是一定要创建新的DOM的。
 
-可以得出几个原则如下： 
+原则如下： 
   * 不同元素类型是无法复用的， span 是无法变成 div的。  
   * 对于相同元素: 
      * 更新属性， 
      * 复用子节点。
 
-现在的代码可能是这样的：
+所以，现在的代码可能是这样的：
 ```javascript 1.7
 ...
 else if(typeof vnode.nodeName == "string") {
