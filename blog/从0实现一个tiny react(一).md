@@ -355,12 +355,14 @@ git clone https://github.com/ykforerlang/tinyreact.git
 git branch [yourbranchname] propsAndState
 ```
 
-### 相关文章     
-**[从0实现一个tiny react(二) virtual-dom](https://segmentfault.com/a/1190000011052656)** 
-
-**[从0实现一个tiny react(三) 生命周期](https://segmentfault.com/a/1190000011156505)**  
-      
-
+### 相关文章
+* [从0实现一个tiny react(一)](https://segmentfault.com/a/1190000010822571)
+* [从0实现一个tiny react（二)](https://segmentfault.com/a/1190000011052656)
+* [从0实现一个tiny react（三）生命周期](https://segmentfault.com/a/1190000011156505)
+* [从0开始实现 react-router](https://segmentfault.com/a/1190000012696920)
+* [从0实现一个tinyredux](https://segmentfault.com/a/1190000011304634)
+* [从0实现一个tiny react-redux](https://segmentfault.com/a/1190000011633971)
+* [为什么我们需要reselect](https://segmentfault.com/a/1190000011936772) 
 
 
 

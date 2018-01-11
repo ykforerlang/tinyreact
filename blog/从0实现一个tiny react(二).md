@@ -412,7 +412,16 @@ render 方法是根据的vnode， 渲染到实际的dom，如果存在olddom会�
    * 当vnode.nodeName是 字符串的时候， 如果存在olddom， 且可以复用， 复用之。否则创建dom节点， 根据props设置节点属性， 遍历render children
    * 当vnode.nodeName是 function的时候， 获取render方法的返回值 vnode'， 执行render(vnode')
    
-[本文代码git地址](https://github.com/ykforerlang/tinyreact)
+[代码git地址](https://github.com/ykforerlang/tinyreact)
+
+### 相关文章
+* [从0实现一个tiny react(一)](https://segmentfault.com/a/1190000010822571)
+* [从0实现一个tiny react（二)](https://segmentfault.com/a/1190000011052656)
+* [从0实现一个tiny react（三）生命周期](https://segmentfault.com/a/1190000011156505)
+* [从0开始实现 react-router](https://segmentfault.com/a/1190000012696920)
+* [从0实现一个tinyredux](https://segmentfault.com/a/1190000011304634)
+* [从0实现一个tiny react-redux](https://segmentfault.com/a/1190000011633971)
+* [为什么我们需要reselect](https://segmentfault.com/a/1190000011936772) 
 
 
 
