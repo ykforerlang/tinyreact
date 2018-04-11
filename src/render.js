@@ -4,6 +4,8 @@
 import { diffObject, getDOM } from './util'
 import Component from './Component'
 
+import { init } from './events'
+
 /**
  * 渲染vnode成实际的dom
  * @param vnode 虚拟dom表示
@@ -11,6 +13,10 @@ import Component from './Component'
  */
 export default function render(vnode, parent) {
     parent.__rendered =[]
+
+    //events init
+    init()
+
     renderInner(vnode, parent, null, null, 0)
 }
 
@@ -138,8 +144,9 @@ function setAttrs(dom, props) {
         }
 
         if(k[0] == "o" && k[1] == "n") {
-            const capture = (k.indexOf("Capture") != -1)
-            dom.addEventListener(k.substring(2).toLowerCase(), v, capture)
+
+            const key = k.substring(2, 3).toLowerCase() + k.substring(3)
+            dom.__events[key] = v
             return
         }
 
@@ -166,9 +173,8 @@ function removeAttrs(dom, props) {
 
 
         if(k[0] == "o" && k[1] == "n") {
-            const capture = (k.indexOf("Capture") != -1)
-            const v = props[k]
-            dom.removeEventListener(k.substring(2).toLowerCase(), v, capture)
+            const key = k.substring(2, 3).toLowerCase() + k.substring(3)
+            dom.__events[key] = null
             continue
         }
 
@@ -223,10 +229,8 @@ function diffAttrs(dom, newProps, oldProps) {
         }
 
         if(k[0] == "o" && k[1] == "n") {
-            const capture = (k.indexOf("Capture") != -1)
-            let eventKey = k.substring(2).toLowerCase()
-            dom.removeEventListener(eventKey, ov, capture)
-            dom.addEventListener(eventKey, v, capture)
+            const key = k.substring(2, 3).toLowerCase() + k.substring(3)
+            dom.__events[key] = v
             continue
         }
 
@@ -244,6 +248,7 @@ function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
     dom.__rendered = []
     dom.__vnode = vnode
     dom.__myIndex = myIndex  // 方便 getDOMIndex 方法
+    dom.__events = {}
 
     if (comp) {
         comp.__rendered = dom

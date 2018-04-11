@@ -38,6 +38,16 @@ class HelloWorld extends Component {
 Tinyreact.render(<HelloWorld/>, document.getElementById("root"))
 ```
 
+### Feature
+* virtual-dom
+* life-cycle
+* SyntheticEvent
+
+### TODO
+* batchUpdate
+* high-performance virtual-dom
+* fiber
+
 ### Example
  1. [helloword](https://github.com/ykforerlang/tinyreact/tree/master/example/helloworld) 
  2. [lifecycle](https://github.com/ykforerlang/tinyreact/tree/master/example/lifecycle)

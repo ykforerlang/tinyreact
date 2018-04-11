@@ -117,7 +117,7 @@ var Component = function () {
                 }
 
                 shoudUpdate && _this.componentWillUpdate && _this.componentWillUpdate(_this.props, state);
-                _this.state = state;
+                _this.state = Object.assign(_this.state, state);
 
                 if (!shoudUpdate) {
                     return; // do nothing just return
@@ -136,6 +136,16 @@ var Component = function () {
 }();
 
 exports.default = Component;
+
+var a = {
+    "nodeName": "div",
+    "props": {},
+    "children": ["i", { "nodeName": "div", "props": {}, "children": ["am"] }, {
+        "nodeName": "div",
+        "props": {},
+        "children": ["grandson"]
+    }]
+};
 
 /***/ }),
 /* 1 */
@@ -167,6 +177,8 @@ var _Component = __webpack_require__(0);
 
 var _Component2 = _interopRequireDefault(_Component);
 
+var _events = __webpack_require__(4);
+
 function _interopRequireDefault(obj) {
     return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -178,6 +190,10 @@ function _interopRequireDefault(obj) {
  */
 function render(vnode, parent) {
     parent.__rendered = [];
+
+    //events init
+    (0, _events.init)();
+
     renderInner(vnode, parent, null, null, 0);
 }
 
@@ -283,6 +299,11 @@ function setAttrs(dom, props) {
             return;
         }
 
+        if (k == "value") {
+            dom.value = v;
+            return;
+        }
+
         if (k == "style") {
             if (typeof v == "string") {
                 dom.style.cssText = v; //IE
@@ -297,8 +318,9 @@ function setAttrs(dom, props) {
         }
 
         if (k[0] == "o" && k[1] == "n") {
-            var capture = k.indexOf("Capture") != -1;
-            dom.addEventListener(k.substring(2).toLowerCase(), v, capture);
+
+            var key = k.substring(2, 3).toLowerCase() + k.substring(3);
+            dom.__events[key] = v;
             return;
         }
 
@@ -313,15 +335,19 @@ function removeAttrs(dom, props) {
             continue;
         }
 
+        if (k == "value") {
+            dom.value = "";
+            continue;
+        }
+
         if (k == "style") {
             dom.style.cssText = ""; //IE
             continue;
         }
 
         if (k[0] == "o" && k[1] == "n") {
-            var capture = k.indexOf("Capture") != -1;
-            var v = props[k];
-            dom.removeEventListener(k.substring(2).toLowerCase(), v, capture);
+            var key = k.substring(2, 3).toLowerCase() + k.substring(3);
+            dom.__events[key] = null;
             continue;
         }
 
@@ -343,6 +369,11 @@ function diffAttrs(dom, newProps, oldProps) {
 
         if (k == "className") {
             dom.setAttribute("class", v);
+            continue;
+        }
+
+        if (k == "value") {
+            dom.value = v;
             continue;
         }
 
@@ -372,10 +403,8 @@ function diffAttrs(dom, newProps, oldProps) {
         }
 
         if (k[0] == "o" && k[1] == "n") {
-            var capture = k.indexOf("Capture") != -1;
-            var eventKey = k.substring(2).toLowerCase();
-            dom.removeEventListener(eventKey, ov, capture);
-            dom.addEventListener(eventKey, v, capture);
+            var key = k.substring(2, 3).toLowerCase() + k.substring(3);
+            dom.__events[key] = v;
             continue;
         }
 
@@ -393,6 +422,7 @@ function createNewDom(vnode, parent, comp, olddomOrComp, myIndex) {
     dom.__rendered = [];
     dom.__vnode = vnode;
     dom.__myIndex = myIndex; // 方便 getDOMIndex 方法
+    dom.__events = {};
 
     if (comp) {
         comp.__rendered = dom;
@@ -502,7 +532,7 @@ function diffObject(leftProps, rightProps) {
    * Created by apple on 2017/8/30.
    */
 function getDOM(comp) {
-    var rendered = comp.__rendered;
+    var rendered = comp;
     while (rendered instanceof _Component2.default) {
         //判断对象是否是dom
         rendered = rendered.__rendered;
@@ -531,7 +561,7 @@ var _Component3 = __webpack_require__(0);
 
 var _Component4 = _interopRequireDefault(_Component3);
 
-var _createElement = __webpack_require__(4);
+var _createElement = __webpack_require__(5);
 
 var _createElement2 = _interopRequireDefault(_createElement);
 
@@ -612,6 +642,81 @@ var PS = function (_Component2) {
 
 /***/ }),
 /* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.init = init;
+var supportEventType = ['keydown', 'keypress', 'keyup', 'click', 'mouseenter', 'mouseover', 'mousemove', 'change'];
+
+function getSyntheticEvent(e) {
+    e.stopPropagation = function () {
+        e.__notup = true; // 不冒泡
+    };
+    return e;
+}
+
+function getRelatedDOMList(e) {
+    var path = e.path || e.deepPath;
+    if (path) return path;
+
+    var result = [];
+
+    var node = e.target;
+    while (node !== window.document) {
+
+        result.push(node);
+        node = node.parentNode;
+    }
+
+    return result;
+}
+
+function superHandle(e) {
+
+    var syntheticEvent = getSyntheticEvent(e);
+
+    var domList = getRelatedDOMList(e);
+    console.log('domList:', domList);
+
+    var eventType = e.type;
+
+    for (var i = domList.length - 1; i >= 0; i--) {
+        // 捕获期
+        var eleDom = domList[i];
+
+        if (!eleDom.__events) break;
+
+        var handle = eleDom.__events[eventType + 'Capture'];
+        handle && handle(syntheticEvent);
+    }
+
+    for (var _i = 0; _i < domList.length; _i++) {
+        // 冒泡期
+        var _eleDom = domList[_i];
+
+        if (!_eleDom.__events) break;
+
+        var _handle = _eleDom.__events[eventType];
+        _handle && _handle(syntheticEvent);
+        if (syntheticEvent.__notup) {
+            break;
+        }
+    }
+}
+
+function init() {
+    supportEventType.forEach(function (eventType) {
+        document.addEventListener(eventType, superHandle);
+    });
+}
+
+/***/ }),
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
